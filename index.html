@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-900">
+<html lang="en" class="h-full bg-slate-950">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Hemzal Staff Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hemzal HQ | Admin Management Console</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
@@ -14,351 +14,365 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .glass-panel { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
   </style>
 </head>
-<body class="h-full text-slate-100 antialiased selection:bg-amber-500 selection:text-white pb-20">
+<body class="h-full text-slate-100 antialiased selection:bg-amber-500 selection:text-white">
 
-  <!-- AUTH CONTAINER (Shown when unauthenticated) -->
-  <div id="authScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 bg-slate-950">
-    <div class="w-full max-w-sm text-center space-y-8">
-      <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-3xl shadow-2xl shadow-amber-500/20">
-        <i class="fa-solid fa-burger"></i>
+  <!-- ADMIN AUTH GUARD -->
+  <div id="adminAuthScreen" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950">
+    <div class="w-full max-w-md text-center space-y-8 glass-panel p-8 rounded-3xl border border-slate-800">
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-3xl">
+        <i class="fa-solid fa-user-shield"></i>
       </div>
       <div>
-        <h1 class="text-2xl font-black tracking-tight text-white uppercase">Hemzal Staff Portal</h1>
-        <p class="mt-2 text-sm text-slate-400">Log in with authorized corporate Google Account to proceed.</p>
+        <h1 class="text-2xl font-black text-white uppercase tracking-wider">Hemzal Admin HQ</h1>
+        <p class="mt-2 text-xs text-slate-400">Strictly authorized administrator access point.</p>
       </div>
-      <button onclick="handleGoogleLogin()" class="w-full py-4 px-6 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-2xl shadow-xl flex items-center justify-center space-x-3 transition active:scale-95">
-        <i class="fa-brands fa-google text-red-500 text-lg"></i>
-        <span>Sign In with Google</span>
+      <button onclick="handleAdminLogin()" class="w-full py-4 px-6 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-2xl shadow-xl flex items-center justify-center space-x-3 transition active:scale-95">
+        <i class="fa-brands fa-google text-slate-950 text-lg"></i>
+        <span>Sign In as Admin</span>
       </button>
-      <div id="authError" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl"></div>
+      <div id="adminAuthError" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl"></div>
     </div>
   </div>
 
-  <!-- MAIN APP WRAPPER (Mobile Viewport Optimized: ~375px Container constraint on desktop) -->
-  <div id="appScreen" class="hidden max-w-md mx-auto min-h-screen flex flex-col relative bg-slate-900 shadow-2xl">
-    
-    <!-- TOP APP BAR -->
-    <header class="sticky top-0 z-40 glass-card px-5 py-4 flex items-center justify-between border-b border-slate-800">
-      <div class="flex items-center space-x-3">
-        <div id="userAvatar" class="w-9 h-9 rounded-full bg-amber-500 flex items-center justify-center font-bold text-slate-950 text-sm">U</div>
-        <div>
-          <h2 id="userName" class="text-sm font-bold text-slate-100 leading-tight">Loading...</h2>
-          <p id="userRole" class="text-[10px] uppercase font-semibold text-amber-400 tracking-wider">Staff</p>
+  <!-- MAIN ADMIN CONSOLE WRAPPER -->
+  <div id="adminConsole" class="hidden min-h-screen flex bg-slate-950">
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="w-64 glass-panel border-r border-slate-800 flex flex-col justify-between p-4 hidden md:flex">
+      <div class="space-y-6">
+        <div class="flex items-center space-x-3 px-3 py-2">
+          <div class="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 font-black flex items-center justify-center text-lg">H</div>
+          <div>
+            <h2 class="text-sm font-black text-white uppercase tracking-wider">Hemzal HQ</h2>
+            <p class="text-[10px] text-amber-400 font-bold">MANAGEMENT SYSTEM</p>
+          </div>
+        </div>
+
+        <nav class="space-y-1">
+          <button onclick="switchAdminTab('overview')" id="nav-overview" class="w-full px-4 py-3 rounded-xl flex items-center space-x-3 text-amber-400 bg-amber-500/10 border border-amber-500/20 font-bold text-xs transition">
+            <i class="fa-solid fa-chart-pie w-5"></i><span>Overview</span>
+          </button>
+          <button onclick="switchAdminTab('branches')" id="nav-branches" class="w-full px-4 py-3 rounded-xl flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-900 font-bold text-xs transition">
+            <i class="fa-solid fa-store w-5"></i><span>Branches</span>
+          </button>
+          <button onclick="switchAdminTab('staff')" id="nav-staff" class="w-full px-4 py-3 rounded-xl flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-900 font-bold text-xs transition">
+            <i class="fa-solid fa-users w-5"></i><span>Staff Directory</span>
+          </button>
+          <button onclick="switchAdminTab('attendance')" id="nav-attendance" class="w-full px-4 py-3 rounded-xl flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-900 font-bold text-xs transition">
+            <i class="fa-solid fa-clock w-5"></i><span>Attendance Logs</span>
+          </button>
+          <button onclick="switchAdminTab('leave')" id="nav-leave" class="w-full px-4 py-3 rounded-xl flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-900 font-bold text-xs transition">
+            <i class="fa-solid fa-calendar-minus w-5"></i><span>Leave Requests</span>
+          </button>
+          <button onclick="switchAdminTab('sales')" id="nav-sales" class="w-full px-4 py-3 rounded-xl flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-900 font-bold text-xs transition">
+            <i class="fa-solid fa-file-invoice-dollar w-5"></i><span>Sales & Inventory</span>
+          </button>
+          <button onclick="switchAdminTab('payroll')" id="nav-payroll" class="w-full px-4 py-3 rounded-xl flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-900 font-bold text-xs transition">
+            <i class="fa-solid fa-calculator w-5"></i><span>Payroll & Payslips</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="border-t border-slate-800 pt-4 px-2">
+        <div class="flex items-center justify-between">
+          <div class="truncate">
+            <p id="adminUserEmail" class="text-xs font-bold text-slate-200 truncate">admin@hemzal.com</p>
+            <p class="text-[10px] text-emerald-400">Super Admin</p>
+          </div>
+          <button onclick="handleAdminLogout()" class="p-2 text-slate-400 hover:text-rose-400 transition"><i class="fa-solid fa-power-off"></i></button>
         </div>
       </div>
-      <button onclick="handleLogout()" class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition">
-        <i class="fa-solid fa-right-from-bracket text-xs"></i>
-      </button>
-    </header>
+    </aside>
 
-    <!-- CONTENT PANELS -->
-    <main class="flex-1 p-5 space-y-6">
-
-      <!-- DASHBOARD TAB -->
-      <section id="tab-dashboard" class="space-y-5">
-        <!-- Date Header -->
-        <div class="glass-card p-4 rounded-2xl border-l-4 border-l-amber-500">
-          <p id="liveDate" class="text-xs text-slate-400 font-medium">Monday, 30 March 2026</p>
-          <h3 id="liveClock" class="text-2xl font-black text-white font-mono mt-0.5">00:00:00 AM</h3>
+    <!-- CONTENT BODY -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+      
+      <!-- TOPBAR -->
+      <header class="glass-panel border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+        <h1 id="tabTitle" class="text-xl font-bold text-white uppercase tracking-wide">Overview</h1>
+        <div class="flex items-center space-x-4">
+          <span class="text-xs text-slate-400 font-mono" id="adminClock">--:--:--</span>
+          <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold">REALTIME CONNECTED</span>
         </div>
+      </header>
 
-        <!-- Attendance Quick Card -->
-        <div class="glass-card p-5 rounded-3xl space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Shift Tracker</span>
-            <span id="dashPunctuality" class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400">NOT CLOCKED IN</span>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-3 py-2 border-y border-slate-800">
-            <div>
-              <p class="text-[10px] text-slate-400 uppercase">Clock In</p>
-              <p id="dashClockIn" class="text-sm font-semibold text-slate-200">--:--</p>
+      <!-- MAIN CONTENT AREA -->
+      <main class="flex-1 overflow-y-auto custom-scroll p-6 space-y-6">
+
+        <!-- OVERVIEW SECTION -->
+        <section id="admin-overview" class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+            <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-amber-500">
+              <p class="text-[10px] uppercase font-bold text-slate-400">Active Duty Staff</p>
+              <h3 id="statActiveStaff" class="text-3xl font-black text-white mt-1">0</h3>
             </div>
-            <div>
-              <p class="text-[10px] text-slate-400 uppercase">Clock Out</p>
-              <p id="dashClockOut" class="text-sm font-semibold text-slate-200">--:--</p>
+            <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-emerald-500">
+              <p class="text-[10px] uppercase font-bold text-slate-400">Today's Attendance</p>
+              <h3 id="statTodayAttendance" class="text-3xl font-black text-white mt-1">0</h3>
+            </div>
+            <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-blue-500">
+              <p class="text-[10px] uppercase font-bold text-slate-400">Pending Leave Requests</p>
+              <h3 id="statPendingLeave" class="text-3xl font-black text-white mt-1">0</h3>
+            </div>
+            <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-purple-500">
+              <p class="text-[10px] uppercase font-bold text-slate-400">Today's Gross Sales</p>
+              <h3 id="statTodaySales" class="text-3xl font-black text-white mt-1">RM 0.00</h3>
             </div>
           </div>
 
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] text-slate-400 uppercase">Duration</p>
-              <p id="dashDuration" class="text-lg font-bold text-amber-400 font-mono">00:00:00</p>
+          <!-- Live Staff Duty Monitor -->
+          <div class="glass-panel p-6 rounded-3xl space-y-4">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Live Duty & Presence Monitor</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-900/80 uppercase text-[10px] font-bold text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th class="p-3">Staff</th>
+                    <th class="p-3">Branch</th>
+                    <th class="p-3">Online Status</th>
+                    <th class="p-3">Clock In</th>
+                    <th class="p-3">Clock Out</th>
+                    <th class="p-3">Shift Status</th>
+                  </tr>
+                </thead>
+                <tbody id="liveDutyTable" class="divide-y divide-slate-800/60"></tbody>
+              </table>
             </div>
-            <div class="flex space-x-2">
-              <button id="btnClockIn" onclick="handleClockIn()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs transition active:scale-95 shadow-lg shadow-emerald-500/20">
-                Clock In
+          </div>
+        </section>
+
+        <!-- BRANCH MANAGEMENT -->
+        <section id="admin-branches" class="hidden space-y-6">
+          <div class="flex justify-between items-center">
+            <input type="text" id="branchSearch" oninput="renderAdminBranches()" placeholder="Search branch..." class="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-xs text-white w-64">
+            <button onclick="openAddBranchModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl transition">
+              <i class="fa-solid fa-plus mr-1"></i> Add Branch
+            </button>
+          </div>
+          <div class="glass-panel p-6 rounded-3xl overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 uppercase text-[10px] font-bold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Code</th>
+                  <th class="p-3">Branch Name</th>
+                  <th class="p-3">Address</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="branchesTable" class="divide-y divide-slate-800/60"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- STAFF MANAGEMENT -->
+        <section id="admin-staff" class="hidden space-y-6">
+          <div class="flex justify-between items-center">
+            <div class="flex space-x-3">
+              <input type="text" id="staffSearch" oninput="renderAdminStaff()" placeholder="Search staff name or email..." class="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-xs text-white w-64">
+              <button onclick="handleMergeDuplicates()" class="px-4 py-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-amber-400 font-bold text-xs rounded-xl">
+                <i class="fa-solid fa-code-merge mr-1"></i> Merge Duplicates
               </button>
-              <button id="btnClockOut" onclick="handleClockOut()" disabled class="px-4 py-2.5 bg-slate-800 text-slate-500 font-bold rounded-xl text-xs transition cursor-not-allowed">
-                Clock Out
-              </button>
             </div>
+            <button onclick="openAddStaffModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl transition">
+              <i class="fa-solid fa-user-plus mr-1"></i> Add Staff
+            </button>
           </div>
-        </div>
-
-        <!-- Quick Metrics -->
-        <div class="grid grid-cols-2 gap-4">
-          <div class="glass-card p-4 rounded-2xl">
-            <i class="fa-solid fa-calendar-check text-amber-400 text-lg mb-2"></i>
-            <p class="text-[10px] text-slate-400 uppercase font-semibold">Leave Balance</p>
-            <p id="dashLeaveBal" class="text-xl font-bold text-slate-100 mt-1">14 Days</p>
+          <div class="glass-panel p-6 rounded-3xl overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 uppercase text-[10px] font-bold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Employee ID</th>
+                  <th class="p-3">Name</th>
+                  <th class="p-3">Email</th>
+                  <th class="p-3">Position</th>
+                  <th class="p-3">Branch</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="staffTable" class="divide-y divide-slate-800/60"></tbody>
+            </table>
           </div>
-          <div class="glass-card p-4 rounded-2xl">
-            <i class="fa-solid fa-file-invoice-dollar text-emerald-400 text-lg mb-2"></i>
-            <p class="text-[10px] text-slate-400 uppercase font-semibold">Latest Payslip</p>
-            <p id="dashPayslipStatus" class="text-xs font-bold text-slate-200 mt-2 truncate">Unavailable</p>
+        </section>
+
+        <!-- ATTENDANCE LOGS -->
+        <section id="admin-attendance" class="hidden space-y-6">
+          <div class="flex justify-between items-center">
+            <input type="text" id="attSearch" oninput="renderAdminAttendance()" placeholder="Filter by staff name or email..." class="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-xs text-white w-64">
+            <button onclick="openManualAttendanceModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs rounded-xl transition">
+              <i class="fa-solid fa-pen-to-square mr-1"></i> Manual Entry
+            </button>
           </div>
-        </div>
-      </section>
-
-      <!-- ATTENDANCE TAB -->
-      <section id="tab-attendance" class="hidden space-y-5">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-white">Attendance Calendar</h3>
-          <button onclick="exportAttendanceCSV()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-amber-400 font-semibold text-xs rounded-xl flex items-center space-x-2">
-            <i class="fa-solid fa-file-csv"></i>
-            <span>Export CSV</span>
-          </button>
-        </div>
-
-        <!-- Month Selector -->
-        <div class="glass-card p-3 rounded-2xl flex items-center justify-between">
-          <button onclick="changeCalMonth(-1)" class="p-2 text-slate-400 hover:text-white"><i class="fa-solid fa-chevron-left"></i></button>
-          <span id="calMonthLabel" class="text-sm font-bold text-slate-200">March 2026</span>
-          <button onclick="changeCalMonth(1)" class="p-2 text-slate-400 hover:text-white"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-
-        <!-- Calendar Grid -->
-        <div class="glass-card p-4 rounded-2xl space-y-3">
-          <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 uppercase">
-            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          <div class="glass-panel p-6 rounded-3xl overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 uppercase text-[10px] font-bold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Date</th>
+                  <th class="p-3">Staff</th>
+                  <th class="p-3">Clock In</th>
+                  <th class="p-3">Clock Out</th>
+                  <th class="p-3">Duration</th>
+                  <th class="p-3">Punctuality</th>
+                  <th class="p-3">Remarks</th>
+                  <th class="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTable" class="divide-y divide-slate-800/60"></tbody>
+            </table>
           </div>
-          <div id="calendarGrid" class="grid grid-cols-7 gap-1.5"></div>
-        </div>
+        </section>
 
-        <!-- Selected Day Details -->
-        <div id="dayDetailCard" class="glass-card p-4 rounded-2xl hidden">
-          <h4 id="dayDetailDate" class="text-xs font-bold text-amber-400 uppercase mb-2">Details</h4>
-          <div class="space-y-1 text-xs text-slate-300">
-            <p>Status: <span id="dayDetailStatus" class="font-bold">--</span></p>
-            <p>Clock In: <span id="dayDetailIn">--</span></p>
-            <p>Clock Out: <span id="dayDetailOut">--</span></p>
-            <p>Remarks: <span id="dayDetailRemarks">--</span></p>
+        <!-- LEAVE MANAGEMENT -->
+        <section id="admin-leave" class="hidden space-y-6">
+          <div class="glass-panel p-6 rounded-3xl overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 uppercase text-[10px] font-bold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Applied Date</th>
+                  <th class="p-3">Staff</th>
+                  <th class="p-3">Leave Type</th>
+                  <th class="p-3">Duration</th>
+                  <th class="p-3">Reason</th>
+                  <th class="p-3">Attachment</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="leaveAdminTable" class="divide-y divide-slate-800/60"></tbody>
+            </table>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- LEAVE APPLICATION TAB -->
-      <section id="tab-leave" class="hidden space-y-5">
-        <h3 class="text-lg font-bold text-white">Apply For Leave</h3>
-        <form id="leaveForm" onsubmit="handleLeaveSubmit(event)" class="glass-card p-5 rounded-3xl space-y-4">
-          <div>
-            <label class="text-xs text-slate-400 font-semibold block mb-1">Leave Type</label>
-            <select id="leaveType" onchange="toggleAttachmentReq()" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
-              <option value="Annual Leave">Annual Leave</option>
-              <option value="Medical Leave">Medical Leave</option>
-              <option value="Emergency Leave">Emergency Leave</option>
-              <option value="Other Leave">Other Leave</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-xs text-slate-400 font-semibold block mb-1">Start Date</label>
-              <input type="date" id="leaveStart" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+        <!-- SALES & REPORTS -->
+        <section id="admin-sales" class="hidden space-y-6">
+          <div class="flex justify-between items-center">
+            <div class="flex space-x-3">
+              <input type="date" id="salesFilterDate" onchange="renderAdminSales()" class="bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white">
+              <select id="salesFilterBranch" onchange="renderAdminSales()" class="bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white">
+                <option value="ALL">All Branches</option>
+              </select>
             </div>
-            <div>
-              <label class="text-xs text-slate-400 font-semibold block mb-1">End Date</label>
-              <input type="date" id="leaveEnd" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
-            </div>
+            <button onclick="exportSalesCSV()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl">
+              <i class="fa-solid fa-file-csv mr-1"></i> Export Filtered CSV
+            </button>
           </div>
-          <div>
-            <label class="text-xs text-slate-400 font-semibold block mb-1">Reason</label>
-            <textarea id="leaveReason" rows="2" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500" placeholder="State reason..."></textarea>
+          <div class="glass-panel p-6 rounded-3xl overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 uppercase text-[10px] font-bold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Date</th>
+                  <th class="p-3">Branch</th>
+                  <th class="p-3">Submitted By</th>
+                  <th class="p-3">Chicken Bags</th>
+                  <th class="p-3">Gross Sales</th>
+                  <th class="p-3">Expenses</th>
+                  <th class="p-3">Grand Total</th>
+                  <th class="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="salesAdminTable" class="divide-y divide-slate-800/60"></tbody>
+            </table>
           </div>
-          <div id="attachmentGroup">
-            <label class="text-xs text-slate-400 font-semibold block mb-1">Attachment (Required for Medical)</label>
-            <input type="file" id="leaveFile" accept="image/*,application/pdf" class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-amber-400 hover:file:bg-slate-700">
-          </div>
-          <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-amber-500/20">
-            Submit Request
-          </button>
-        </form>
+        </section>
 
-        <!-- Leave History -->
-        <div class="space-y-3">
-          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Leave Applications History</h4>
-          <div id="leaveList" class="space-y-2"></div>
-        </div>
-      </section>
-
-      <!-- DAILY SALES TAB -->
-      <section id="tab-sales" class="hidden space-y-5">
-        <h3 class="text-lg font-bold text-white">Daily Sales & Inventory</h3>
-        <form id="salesForm" onsubmit="handleSalesSubmit(event)" class="space-y-4">
-          
-          <!-- General -->
-          <div class="glass-card p-4 rounded-2xl space-y-3">
-            <h4 class="text-xs font-bold text-amber-400 uppercase">General Info</h4>
-            <div class="grid grid-cols-2 gap-3">
+        <!-- PAYROLL & PAYSLIPS -->
+        <section id="admin-payroll" class="hidden space-y-6">
+          <!-- Payroll Calculator Card -->
+          <div class="glass-panel p-6 rounded-3xl space-y-4">
+            <h3 class="text-sm font-bold text-amber-400 uppercase">Malaysian Payroll Engine</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label class="text-[10px] text-slate-400">Date</label>
-                <input type="date" id="salesDate" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                <label class="text-[10px] text-slate-400">Basic Salary (RM)</label>
+                <input type="number" id="payBasic" value="2500" oninput="calculatePayroll()" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
               </div>
               <div>
-                <label class="text-[10px] text-slate-400">Branch</label>
-                <select id="salesBranch" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"></select>
+                <label class="text-[10px] text-slate-400">Absent Days</label>
+                <input type="number" id="payAbsentDays" value="0" oninput="calculatePayroll()" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Overtime Hours</label>
+                <input type="number" id="payOT" value="0" oninput="calculatePayroll()" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Advances / Adjustments (RM)</label>
+                <input type="number" id="payAdvance" value="0" oninput="calculatePayroll()" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
               </div>
             </div>
-            <div>
-              <label class="text-[10px] text-slate-400">Chicken Bags (1 Bag = 20 Pcs)</label>
-              <input type="number" min="0" id="salesBags" value="0" oninput="recalculateSales()" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+
+            <!-- Calculated Breakdown -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-slate-900/60 rounded-2xl border border-slate-800 text-xs">
+              <div><span class="text-slate-400 text-[10px] block">Gross Salary</span><strong id="payResGross" class="text-white">RM 0.00</strong></div>
+              <div><span class="text-slate-400 text-[10px] block">EPF Employee (11%)</span><strong id="payResEPF" class="text-rose-400">RM 0.00</strong></div>
+              <div><span class="text-slate-400 text-[10px] block">SOCSO</span><strong id="payResSOCSO" class="text-rose-400">RM 0.00</strong></div>
+              <div><span class="text-slate-400 text-[10px] block">EIS</span><strong id="payResEIS" class="text-rose-400">RM 0.00</strong></div>
+              <div><span class="text-slate-400 text-[10px] block">Calculated Net Salary</span><strong id="payResNet" class="text-emerald-400 font-black text-sm">RM 0.00</strong></div>
             </div>
           </div>
 
-          <!-- Platforms -->
-          <div class="glass-card p-4 rounded-2xl space-y-3">
-            <h4 class="text-xs font-bold text-amber-400 uppercase">Platform Sales (RM)</h4>
-            <div class="grid grid-cols-2 gap-2">
-              <input type="number" step="0.01" min="0" placeholder="Misi" id="platMisi" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="Lalamove" id="platLala" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="FoodPanda" id="platPanda" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="GrabFood" id="platGrab" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="ShopeeFood" id="platShopee" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white col-span-2">
+          <!-- Upload Payslip Form -->
+          <form id="uploadPayslipForm" onsubmit="handlePayslipUpload(event)" class="glass-panel p-6 rounded-3xl space-y-4">
+            <h3 class="text-sm font-bold text-white uppercase">Upload Staff Payslip Document</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label class="text-[10px] text-slate-400">Target Staff</label>
+                <select id="payStaffSelect" required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white"></select>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Pay Period (YYYY-MM)</label>
+                <input type="month" id="payPeriod" required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Final Net Salary (RM)</label>
+                <input type="number" step="0.01" id="payNetAmount" required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Payslip File (PDF/Image)</label>
+                <input type="file" id="payFile" accept="image/*,application/pdf" required class="w-full text-xs text-slate-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-800 file:text-amber-400">
+              </div>
             </div>
-          </div>
+            <button type="submit" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition">
+              Upload Payslip
+            </button>
+          </form>
 
-          <!-- Inventory & Seasoning Matrix -->
-          <div class="glass-card p-4 rounded-2xl space-y-3">
-            <h4 class="text-xs font-bold text-amber-400 uppercase">Product Inventory (Units)</h4>
-            <div id="inventoryContainer" class="space-y-2"></div>
-          </div>
-
-          <!-- Promo & Expenses -->
-          <div class="glass-card p-4 rounded-2xl space-y-3">
-            <h4 class="text-xs font-bold text-amber-400 uppercase">Promo & Expenses</h4>
-            <div>
-              <label class="text-[10px] text-slate-400">10pcs Promo Set Quantity (RM 53.90/ea)</label>
-              <input type="number" min="0" id="promo10" value="0" oninput="recalculateSales()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+          <!-- Payslip Management Table -->
+          <div class="glass-panel p-6 rounded-3xl overflow-x-auto">
+            <div class="flex justify-between items-center mb-4">
+              <h4 class="text-xs font-bold text-slate-400 uppercase">Uploaded Payslips Registry</h4>
+              <button onclick="exportPayslipsCSV()" class="px-3 py-1.5 bg-slate-800 text-amber-400 border border-slate-700 rounded-xl text-xs font-bold">
+                <i class="fa-solid fa-file-csv mr-1"></i> Export Payslips CSV
+              </button>
             </div>
-            <div class="grid grid-cols-2 gap-2 pt-2">
-              <input type="number" step="0.01" min="0" placeholder="Gas" id="expGas" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="Ice" id="expIce" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="Goods Purchase" id="expGoods" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="Fuel / Vehicle" id="expFuel" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="Laundry" id="expLaundry" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="Cooking Oil" id="expOil" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
-              <input type="number" step="0.01" min="0" placeholder="Staff Meal" id="expMeal" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white col-span-2">
-            </div>
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 uppercase text-[10px] font-bold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Staff Name</th>
+                  <th class="p-3">Email</th>
+                  <th class="p-3">Pay Period</th>
+                  <th class="p-3">Net Salary</th>
+                  <th class="p-3">Uploaded Date</th>
+                  <th class="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="payslipsAdminTable" class="divide-y divide-slate-800/60"></tbody>
+            </table>
           </div>
+        </section>
 
-          <!-- Quality / Remarks -->
-          <div class="glass-card p-4 rounded-2xl space-y-2">
-            <h4 class="text-xs font-bold text-amber-400 uppercase">Wastage & Feedback</h4>
-            <textarea id="salesWastage" rows="2" placeholder="Wastage, spoiled items, feedback..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"></textarea>
-          </div>
-
-          <!-- Summary Display -->
-          <div class="glass-card p-5 rounded-3xl bg-amber-500/10 border-amber-500/30 space-y-2">
-            <div class="flex justify-between text-xs"><span>Chicken Sales:</span><span id="dispChicken" class="font-bold">RM 0.00</span></div>
-            <div class="flex justify-between text-xs"><span>Platform Sales:</span><span id="dispPlatform" class="font-bold">RM 0.00</span></div>
-            <div class="flex justify-between text-xs"><span>Product Sales:</span><span id="dispProduct" class="font-bold">RM 0.00</span></div>
-            <div class="flex justify-between text-xs"><span>Gross Sales:</span><span id="dispGross" class="font-bold text-emerald-400">RM 0.00</span></div>
-            <div class="flex justify-between text-xs"><span>Total Expenses:</span><span id="dispExpenses" class="font-bold text-rose-400">RM 0.00</span></div>
-            <div class="border-t border-slate-700 pt-2 flex justify-between text-sm font-black text-white">
-              <span>Grand Total:</span><span id="dispGrand" class="text-amber-400">RM 0.00</span>
-            </div>
-          </div>
-
-          <button type="submit" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl text-sm transition shadow-xl shadow-emerald-500/20">
-            Submit Daily Sales Report
-          </button>
-        </form>
-      </section>
-
-      <!-- PAYSLIP TAB -->
-      <section id="tab-payslip" class="hidden space-y-5">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-white">My Payslips</h3>
-          <select id="payslipYearFilter" onchange="renderPayslips()" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-1.5 text-slate-200">
-            <option value="ALL">All Years</option>
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
-          </select>
-        </div>
-        <div id="payslipList" class="space-y-3"></div>
-      </section>
-
-      <!-- PROFILE TAB -->
-      <section id="tab-profile" class="hidden space-y-5">
-        <div class="glass-card p-6 rounded-3xl text-center space-y-4">
-          <div id="profAvatar" class="w-20 h-20 rounded-full bg-amber-500 text-slate-950 text-3xl font-black flex items-center justify-center mx-auto shadow-xl shadow-amber-500/20">U</div>
-          <div>
-            <h3 id="profName" class="text-lg font-bold text-white">--</h3>
-            <p id="profEmail" class="text-xs text-slate-400">--</p>
-          </div>
-          <span id="profStatus" class="inline-block px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE EMPLOYEE</span>
-        </div>
-
-        <div class="glass-card p-5 rounded-3xl space-y-3 text-xs">
-          <div class="flex justify-between py-2 border-b border-slate-800">
-            <span class="text-slate-400">Employee ID</span>
-            <span id="profEmpId" class="font-bold text-white">--</span>
-          </div>
-          <div class="flex justify-between py-2 border-b border-slate-800">
-            <span class="text-slate-400">Position</span>
-            <span id="profPosition" class="font-bold text-white">--</span>
-          </div>
-          <div class="flex justify-between py-2 border-b border-slate-800">
-            <span class="text-slate-400">Branch</span>
-            <span id="profBranch" class="font-bold text-white">--</span>
-          </div>
-          <div class="flex justify-between py-2">
-            <span class="text-slate-400">Phone</span>
-            <span id="profPhone" class="font-bold text-white">--</span>
-          </div>
-        </div>
-      </section>
-
-    </main>
-
-    <!-- BOTTOM TAB NAVIGATION -->
-    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-card border-t border-slate-800 px-3 py-2 flex justify-around items-center z-40">
-      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center space-y-1 text-amber-500">
-        <i class="fa-solid fa-house text-base"></i>
-        <span class="text-[9px] font-bold">Home</span>
-      </button>
-      <button onclick="switchTab('attendance')" id="nav-attendance" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
-        <i class="fa-solid fa-calendar-days text-base"></i>
-        <span class="text-[9px] font-bold">Attendance</span>
-      </button>
-      <button onclick="switchTab('leave')" id="nav-leave" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
-        <i class="fa-solid fa-paper-plane text-base"></i>
-        <span class="text-[9px] font-bold">Leave</span>
-      </button>
-      <button onclick="switchTab('sales')" id="nav-sales" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
-        <i class="fa-solid fa-chart-line text-base"></i>
-        <span class="text-[9px] font-bold">Sales</span>
-      </button>
-      <button onclick="switchTab('payslip')" id="nav-payslip" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
-        <i class="fa-solid fa-wallet text-base"></i>
-        <span class="text-[9px] font-bold">Payslip</span>
-      </button>
-      <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
-        <i class="fa-solid fa-user text-base"></i>
-        <span class="text-[9px] font-bold">Profile</span>
-      </button>
-    </nav>
+      </main>
+    </div>
   </div>
 
   <!-- SCRIPT ENGINE -->
   <script>
     // -------------------------------------------------------------
-    // FIREBASE INITIALIZATION & SHARED LOGIC
+    // FIREBASE INITIALIZATION & AUTHORIZATION
     // -------------------------------------------------------------
     const firebaseConfig = {
       apiKey: "YOUR_FIREBASE_API_KEY",
@@ -374,602 +388,603 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // System Products Config
-    const PRODUCTS = [
-      { id: 'cheese', name: 'Cheese', price: 2.0 },
-      { id: 'korean', name: 'Korean', price: 2.0 },
-      { id: 'garlic', name: 'Garlic', price: 2.0 },
-      { id: 'furikake', name: 'Furikake', price: 3.0 },
-      { id: 'togarashi', name: 'Togarashi', price: 3.0 },
-      { id: 'coleslaw', name: 'Coleslaw', price: 0.0 }
-    ];
+    let currentAdminUser = null;
 
-    let currentUser = null;
-    let currentStaffData = null;
-    let liveTimerInterval = null;
-    let selectedCalMonth = new Date();
-    let currentTodayLog = null;
-
-    // -------------------------------------------------------------
-    // AUTHENTICATION & PRESENCE
-    // -------------------------------------------------------------
     auth.onAuthStateChanged(async (user) => {
       if (user) {
-        currentUser = user;
-        document.getElementById('authScreen').classList.add('hidden');
-        document.getElementById('appScreen').classList.remove('hidden');
-        
-        await loadStaffProfile();
-        setupRealtimeListeners();
-        startClock();
-        setupPresence(user.uid);
-        initSalesInventoryForm();
+        const isAdmin = await isAuthorizedAdmin(user);
+        if (isAdmin) {
+          currentAdminUser = user;
+          document.getElementById('adminAuthScreen').classList.add('hidden');
+          document.getElementById('adminConsole').classList.remove('hidden');
+          document.getElementById('adminUserEmail').innerText = user.email;
+          
+          initAdminListeners();
+          startAutoAbsentEngine();
+          startClock();
+          calculatePayroll();
+        } else {
+          alert("Unauthorized Admin Account. Access Denied.");
+          auth.signOut();
+        }
       } else {
-        currentUser = null;
-        document.getElementById('authScreen').classList.remove('hidden');
-        document.getElementById('appScreen').classList.add('hidden');
+        document.getElementById('adminAuthScreen').classList.remove('hidden');
+        document.getElementById('adminConsole').classList.add('hidden');
       }
     });
 
-    function handleGoogleLogin() {
+    async function isAuthorizedAdmin(user) {
+      const snap = await db.ref(`admins/${user.uid}`).once('value');
+      return snap.exists();
+    }
+
+    function handleAdminLogin() {
       const provider = new firebase.auth.GoogleAuthProvider();
       auth.signInWithPopup(provider).catch(err => {
-        const errEl = document.getElementById('authError');
+        const errEl = document.getElementById('adminAuthError');
         errEl.innerText = err.message;
         errEl.classList.remove('hidden');
       });
     }
 
-    function handleLogout() {
-      if (currentUser) {
-        db.ref(`presence/${currentUser.uid}`).set({ status: 'offline', lastSeen: firebase.database.ServerValue.TIMESTAMP });
-      }
+    function handleAdminLogout() {
       auth.signOut();
     }
 
-    function setupPresence(uid) {
-      const pRef = db.ref(`presence/${uid}`);
-      pRef.set({ status: 'online', email: currentUser.email, lastSeen: firebase.database.ServerValue.TIMESTAMP });
-      pRef.onDisconnect().set({ status: 'offline', email: currentUser.email, lastSeen: firebase.database.ServerValue.TIMESTAMP });
-    }
-
-    async function loadStaffProfile() {
-      const snap = await db.ref('staff').orderByChild('email').equalTo(currentUser.email).once('value');
-      const data = snap.val();
-      if (data) {
-        const key = Object.keys(data)[0];
-        currentStaffData = data[key];
-      } else {
-        currentStaffData = {
-          employeeId: 'HMZ-' + Math.floor(1000 + Math.random() * 9000),
-          name: currentUser.displayName || 'Staff Member',
-          email: currentUser.email,
-          phone: '--', position: 'Staff', branch: 'Ampang Utama', status: 'ACTIVE'
-        };
-      }
-      
-      // Update UI Header & Profile
-      document.getElementById('userName').innerText = currentStaffData.name;
-      document.getElementById('userAvatar').innerText = currentStaffData.name.charAt(0).toUpperCase();
-      document.getElementById('profName').innerText = currentStaffData.name;
-      document.getElementById('profEmail').innerText = currentStaffData.email;
-      document.getElementById('profEmpId').innerText = currentStaffData.employeeId;
-      document.getElementById('profPosition').innerText = currentStaffData.position;
-      document.getElementById('profBranch').innerText = currentStaffData.branch;
-      document.getElementById('profPhone').innerText = currentStaffData.phone;
-      document.getElementById('profAvatar').innerText = currentStaffData.name.charAt(0).toUpperCase();
-    }
-
-    // -------------------------------------------------------------
-    // CLOCK & TIMER LOGIC
-    // -------------------------------------------------------------
     function startClock() {
       setInterval(() => {
-        const now = new Date();
-        document.getElementById('liveDate').innerText = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-        document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: true });
+        document.getElementById('adminClock').innerText = new Date().toLocaleTimeString('en-US');
       }, 1000);
     }
 
-    function setupRealtimeListeners() {
-      const todayStr = new Date().toISOString().split('T')[0];
-      
-      // Attendance Listener
-      db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).on('value', snap => {
-        const logs = snap.val() || {};
-        currentTodayLog = Object.values(logs).find(l => l.date === todayStr);
-        updateDashboardAttendance(currentTodayLog);
-        renderCalendar();
+    // -------------------------------------------------------------
+    // REALTIME DATABASE LISTENERS & RE-RENDERERS
+    // -------------------------------------------------------------
+    function initAdminListeners() {
+      // Staff & Presence
+      db.ref('staff').on('value', snap => {
+        window.adminStaff = snap.val() || {};
+        renderAdminStaff();
+        updateStaffDropdowns();
       });
 
-      // Leave Listener
-      db.ref('leave_requests').orderByChild('userEmail').equalTo(currentUser.email).on('value', snap => {
-        renderLeaveList(snap.val() || {});
+      db.ref('presence').on('value', snap => {
+        window.adminPresence = snap.val() || {};
+        renderLiveDuty();
       });
 
-      // Branch Listener for Sales Dropdown
       db.ref('branches').on('value', snap => {
-        const branches = snap.val() || {};
-        const sel = document.getElementById('salesBranch');
-        sel.innerHTML = '';
-        Object.values(branches).filter(b => b.status === 'ACTIVE').forEach(b => {
-          sel.innerHTML += `<option value="${b.name}">${b.name} (${b.code})</option>`;
-        });
+        window.adminBranches = snap.val() || {};
+        renderAdminBranches();
+        updateBranchDropdowns();
       });
 
-      // Payslips Listener
-      db.ref('payslips').orderByChild('staffEmail').equalTo(currentUser.email).on('value', snap => {
-        window.staffPayslips = snap.val() || {};
-        renderPayslips();
+      db.ref('attendance_logs').on('value', snap => {
+        window.adminAttendance = snap.val() || {};
+        renderAdminAttendance();
+        renderLiveDuty();
+        updateOverviewStats();
       });
-    }
 
-    function updateDashboardAttendance(log) {
-      clearInterval(liveTimerInterval);
-      const btnIn = document.getElementById('btnClockIn');
-      const btnOut = document.getElementById('btnClockOut');
-      const pBadge = document.getElementById('dashPunctuality');
+      db.ref('leave_requests').on('value', snap => {
+        window.adminLeave = snap.val() || {};
+        renderAdminLeave();
+        updateOverviewStats();
+      });
 
-      if (!log) {
-        document.getElementById('dashClockIn').innerText = '--:--';
-        document.getElementById('dashClockOut').innerText = '--:--';
-        document.getElementById('dashDuration').innerText = '00:00:00';
-        pBadge.innerText = 'NOT CLOCKED IN';
-        pBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400';
-        btnIn.disabled = false;
-        btnIn.className = 'px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs transition active:scale-95 shadow-lg shadow-emerald-500/20';
-        btnOut.disabled = true;
-        btnOut.className = 'px-4 py-2.5 bg-slate-800 text-slate-500 font-bold rounded-xl text-xs cursor-not-allowed';
-        return;
-      }
+      db.ref('sales_updates').on('value', snap => {
+        window.adminSales = snap.val() || {};
+        renderAdminSales();
+        updateOverviewStats();
+      });
 
-      document.getElementById('dashClockIn').innerText = log.clockIn;
-      document.getElementById('dashClockOut').innerText = log.clockOut || '--:--';
-      pBadge.innerText = log.punctualityStatus;
-
-      if (log.punctualityStatus === 'ON TIME') {
-        pBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
-      } else if (log.punctualityStatus === 'LATE') {
-        pBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30';
-      } else {
-        pBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30';
-      }
-
-      btnIn.disabled = true;
-      btnIn.className = 'px-4 py-2.5 bg-slate-800 text-slate-500 font-bold rounded-xl text-xs cursor-not-allowed';
-
-      if (log.clockIn && !log.clockOut) {
-        btnOut.disabled = false;
-        btnOut.className = 'px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl text-xs transition active:scale-95 shadow-lg shadow-rose-500/20';
-        
-        // Start Live Duration Timer
-        const inTimeParts = log.clockIn.split(':');
-        const startTime = new Date();
-        startTime.setHours(parseInt(inTimeParts[0]), parseInt(inTimeParts[1]), parseInt(inTimeParts[2]));
-
-        liveTimerInterval = setInterval(() => {
-          const diffMs = new Date() - startTime;
-          document.getElementById('dashDuration').innerText = formatMs(diffMs);
-        }, 1000);
-      } else {
-        btnOut.disabled = true;
-        btnOut.className = 'px-4 py-2.5 bg-slate-800 text-slate-500 font-bold rounded-xl text-xs cursor-not-allowed';
-        document.getElementById('dashDuration').innerText = log.durationText || '00:00:00';
-      }
-    }
-
-    function formatMs(ms) {
-      const totalSec = Math.floor(ms / 1000);
-      const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
-      const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
-      const s = String(totalSec % 60).padStart(2, '0');
-      return `${h}:${m}:${s}`;
+      db.ref('payslips').on('value', snap => {
+        window.adminPayslips = snap.val() || {};
+        renderAdminPayslips();
+      });
     }
 
     // -------------------------------------------------------------
-    // ATTENDANCE CLOCK IN / OUT ACTIONS
+    // AUTOMATIC ABSENT ENGINE
+    // Rules: Triggers automatically on load & every 5 mins.
+    // Marks staff ABSENT if time > 11:00 AM, active, no clockIn, no approved leave.
     // -------------------------------------------------------------
-    async function handleClockIn() {
+    function startAutoAbsentEngine() {
+      runAutoAbsentCheck();
+      setInterval(runAutoAbsentCheck, 5 * 60 * 1000); // 5 Minutes
+    }
+
+    async function runAutoAbsentCheck() {
       const now = new Date();
-      const hours = now.getHours();
-      const mins = now.getMinutes();
-      const timeNum = hours + mins / 60;
-
-      // Rules: 8:00 (8.0) to 9:30 (9.5) = ON TIME, >9.5 to 11.0 = LATE, else barred
-      if (timeNum < 8.0 || timeNum > 11.0) {
-        alert('Clock-in is strictly restricted to between 8:00 AM and 11:00 AM.');
-        return;
-      }
-
-      let punctuality = 'ON TIME';
-      if (timeNum > 9.5) punctuality = 'LATE';
+      if (now.getHours() < 11) return; // Only process after 11:00 AM
 
       const todayStr = now.toISOString().split('T')[0];
-      const timeStr = now.toTimeString().split(' ')[0];
+      const staffSnap = await db.ref('staff').once('value');
+      const attSnap = await db.ref('attendance_logs').once('value');
+      const leaveSnap = await db.ref('leave_requests').once('value');
 
-      const logData = {
-        employeeId: currentStaffData.employeeId,
-        empName: currentStaffData.name,
-        userEmail: currentUser.email,
-        date: todayStr,
-        clockIn: timeStr,
-        clockOut: '',
-        durationText: '00:00:00',
-        punctualityStatus: punctuality,
-        remarks: `Clocked in via Mobile Portal`,
-        timestamp: firebase.database.ServerValue.TIMESTAMP,
-        createdByAdmin: false,
-        autoGenerated: false,
-        editedByAdmin: false
-      };
+      const staffList = Object.values(staffSnap.val() || {}).filter(s => s.status === 'ACTIVE');
+      const attList = Object.values(attSnap.val() || {}).filter(a => a.date === todayStr);
+      const leaveList = Object.values(leaveSnap.val() || {}).filter(l => l.status === 'APPROVED' && todayStr >= l.startDate && todayStr <= l.endDate);
 
-      const newRef = db.ref('attendance_logs').push();
-      await newRef.set(logData);
-      alert(`Clocked In successfully as ${punctuality}!`);
+      staffList.forEach(async (staff) => {
+        const hasAtt = attList.some(a => a.userEmail === staff.email);
+        const hasLeave = leaveList.some(l => l.userEmail === staff.email);
+
+        if (!hasAtt && !hasLeave) {
+          const autoAbsentPayload = {
+            employeeId: staff.employeeId,
+            empName: staff.name,
+            userEmail: staff.email,
+            date: todayStr,
+            clockIn: '--',
+            clockOut: '--',
+            durationText: 'No Clock-In',
+            punctualityStatus: 'ABSENT',
+            remarks: 'Auto-marked absent after 11:00 AM',
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            createdByAdmin: false,
+            autoGenerated: true,
+            editedByAdmin: false
+          };
+          await db.ref('attendance_logs').push().set(autoAbsentPayload);
+        }
+      });
     }
 
-    async function handleClockOut() {
-      if (!currentTodayLog) return;
-      const snap = await db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).once('value');
-      const logs = snap.val() || {};
-      const key = Object.keys(logs).find(k => logs[k].date === currentTodayLog.date && !logs[k].clockOut);
-
-      if (!key) return;
-
-      const now = new Date();
-      const outTimeStr = now.toTimeString().split(' ')[0];
-
-      const inParts = logs[key].clockIn.split(':');
-      const inDate = new Date();
-      inDate.setHours(parseInt(inParts[0]), parseInt(inParts[1]), parseInt(inParts[2]));
-      const diffMs = now - inDate;
-      const durationText = formatMs(diffMs);
-
-      await db.ref(`attendance_logs/${key}`).update({
-        clockOut: outTimeStr,
-        durationText: durationText
+    // -------------------------------------------------------------
+    // UI TAB SWITCHER
+    // -------------------------------------------------------------
+    function switchAdminTab(tabId) {
+      ['overview', 'branches', 'staff', 'attendance', 'leave', 'sales', 'payroll'].forEach(t => {
+        document.getElementById(`admin-${t}`).classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${t}`);
+        if(navBtn) navBtn.className = 'w-full px-4 py-3 rounded-xl flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-900 font-bold text-xs transition';
       });
 
-      alert('Clocked Out successfully!');
+      document.getElementById(`admin-${tabId}`).classList.remove('hidden');
+      document.getElementById(`nav-${tabId}`).className = 'w-full px-4 py-3 rounded-xl flex items-center space-x-3 text-amber-400 bg-amber-500/10 border border-amber-500/20 font-bold text-xs transition';
+      document.getElementById('tabTitle').innerText = tabId.toUpperCase();
     }
 
     // -------------------------------------------------------------
-    // CALENDAR & EXPORT
+    // RENDERERS & MANAGEMENT
     // -------------------------------------------------------------
-    function changeCalMonth(dir) {
-      selectedCalMonth.setMonth(selectedCalMonth.getMonth() + dir);
-      renderCalendar();
+    function updateOverviewStats() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayAtt = Object.values(window.adminAttendance || {}).filter(a => a.date === todayStr);
+      const pendingLeave = Object.values(window.adminLeave || {}).filter(l => l.status === 'PENDING');
+      const todaySales = Object.values(window.adminSales || {}).filter(s => s.date === todayStr);
+
+      let grossSum = 0;
+      todaySales.forEach(s => grossSum += (s.calculations ? s.calculations.grossSales : 0));
+
+      document.getElementById('statActiveStaff').innerText = Object.values(window.adminStaff || {}).filter(s => s.status === 'ACTIVE').length;
+      document.getElementById('statTodayAttendance').innerText = todayAtt.length;
+      document.getElementById('statPendingLeave').innerText = pendingLeave.length;
+      document.getElementById('statTodaySales').innerText = `RM ${grossSum.toFixed(2)}`;
     }
 
-    async function renderCalendar() {
-      const year = selectedCalMonth.getFullYear();
-      const month = selectedCalMonth.getMonth();
-      document.getElementById('calMonthLabel').innerText = selectedCalMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    function renderLiveDuty() {
+      const tbody = document.getElementById('liveDutyTable');
+      tbody.innerHTML = '';
+      const todayStr = new Date().toISOString().split('T')[0];
 
-      const grid = document.getElementById('calendarGrid');
-      grid.innerHTML = '';
+      Object.values(window.adminStaff || {}).forEach(s => {
+        const att = Object.values(window.adminAttendance || {}).find(a => a.userEmail === s.email && a.date === todayStr);
+        const pres = Object.values(window.adminPresence || {}).find(p => p.email === s.email);
 
-      const firstDay = new Date(year, month, 1).getDay();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const isOnline = pres && pres.status === 'online';
+        const onlineBadge = isOnline 
+          ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[9px]">ONLINE</span>`
+          : `<span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-500 font-bold text-[9px]">OFFLINE</span>`;
 
-      const snap = await db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).once('value');
-      const logs = snap.val() || {};
-      const logMap = {};
-      Object.values(logs).forEach(l => { logMap[l.date] = l; });
-
-      // Padding
-      for (let i = 0; i < firstDay; i++) {
-        grid.innerHTML += `<div></div>`;
-      }
-
-      // Days
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const log = logMap[dateStr];
-
-        let badgeClass = 'bg-slate-800 border-slate-700 text-slate-400';
-        if (log) {
-          if (log.punctualityStatus === 'ON TIME') badgeClass = 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 font-bold';
-          else if (log.punctualityStatus === 'LATE') badgeClass = 'bg-amber-500/20 border-amber-500/40 text-amber-400 font-bold';
-          else if (log.punctualityStatus === 'ABSENT') badgeClass = 'bg-rose-500/20 border-rose-500/40 text-rose-400 font-bold';
-          else badgeClass = 'bg-blue-500/20 border-blue-500/40 text-blue-400 font-bold';
-        }
-
-        grid.innerHTML += `
-          <button onclick="showDayDetail('${dateStr}')" class="h-10 rounded-xl border flex flex-col items-center justify-center ${badgeClass} text-xs transition active:scale-95">
-            <span>${d}</span>
-          </button>
+        tbody.innerHTML += `
+          <tr>
+            <td class="p-3 font-bold text-white">${s.name}<br><span class="text-[10px] text-slate-500 font-normal">${s.email}</span></td>
+            <td class="p-3">${s.branch || '--'}</td>
+            <td class="p-3">${onlineBadge}</td>
+            <td class="p-3">${att ? att.clockIn : '--'}</td>
+            <td class="p-3">${att ? (att.clockOut || '--') : '--'}</td>
+            <td class="p-3 font-bold">${att ? att.punctualityStatus : 'NOT CLOCKED IN'}</td>
+          </tr>
         `;
+      });
+    }
+
+    function renderAdminBranches() {
+      const tbody = document.getElementById('branchesTable');
+      tbody.innerHTML = '';
+      const query = (document.getElementById('branchSearch').value || '').toLowerCase();
+
+      Object.entries(window.adminBranches || {}).forEach(([id, b]) => {
+        if (b.name.toLowerCase().includes(query) || b.code.toLowerCase().includes(query)) {
+          const statusBadge = b.status === 'ACTIVE' 
+            ? `<span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 font-bold text-[9px] rounded-full">ACTIVE</span>`
+            : `<span class="px-2 py-1 bg-rose-500/20 text-rose-400 font-bold text-[9px] rounded-full">INACTIVE</span>`;
+
+          tbody.innerHTML += `
+            <tr>
+              <td class="p-3 font-mono font-bold text-amber-400">${b.code}</td>
+              <td class="p-3 font-bold text-white">${b.name}</td>
+              <td class="p-3 text-slate-400">${b.address}</td>
+              <td class="p-3">${statusBadge}</td>
+              <td class="p-3">
+                <button onclick="toggleBranchStatus('${id}', '${b.status}')" class="px-2 py-1 bg-slate-800 text-slate-300 hover:text-white rounded text-[10px]">Toggle Status</button>
+              </td>
+            </tr>
+          `;
+        }
+      });
+    }
+
+    async function toggleBranchStatus(id, curr) {
+      const next = curr === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      await db.ref(`branches/${id}`).update({ status: next, updatedAt: firebase.database.ServerValue.TIMESTAMP });
+    }
+
+    function renderAdminStaff() {
+      const tbody = document.getElementById('staffTable');
+      tbody.innerHTML = '';
+      const query = (document.getElementById('staffSearch').value || '').toLowerCase();
+
+      Object.entries(window.adminStaff || {}).forEach(([id, s]) => {
+        if (s.name.toLowerCase().includes(query) || s.email.toLowerCase().includes(query)) {
+          tbody.innerHTML += `
+            <tr>
+              <td class="p-3 font-mono text-amber-400">${s.employeeId}</td>
+              <td class="p-3 font-bold text-white">${s.name}</td>
+              <td class="p-3 text-slate-400">${s.email}</td>
+              <td class="p-3">${s.position}</td>
+              <td class="p-3">${s.branch}</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-bold">${s.status}</span></td>
+              <td class="p-3 space-x-2">
+                <button onclick="deleteStaffRecord('${id}')" class="p-1 text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash"></i></button>
+              </td>
+            </tr>
+          `;
+        }
+      });
+    }
+
+    async function handleMergeDuplicates() {
+      const staffList = Object.entries(window.adminStaff || {});
+      const emailMap = {};
+      let mergedCount = 0;
+
+      staffList.forEach(([id, s]) => {
+        if (!emailMap[s.email]) {
+          emailMap[s.email] = id;
+        } else {
+          // Duplicate detected - safely delete duplicate secondary entry
+          db.ref(`staff/${id}`).remove();
+          mergedCount++;
+        }
+      });
+
+      alert(`Merge Complete: ${mergedCount} duplicate staff entries consolidated.`);
+    }
+
+    async function deleteStaffRecord(id) {
+      if (confirm('Are you sure you want to delete this staff record?')) {
+        await db.ref(`staff/${id}`).remove();
       }
     }
 
-    async function showDayDetail(dateStr) {
-      const snap = await db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).once('value');
-      const logs = snap.val() || {};
-      const log = Object.values(logs).find(l => l.date === dateStr);
+    function renderAdminAttendance() {
+      const tbody = document.getElementById('attendanceTable');
+      tbody.innerHTML = '';
+      const query = (document.getElementById('attSearch').value || '').toLowerCase();
 
-      const card = document.getElementById('dayDetailCard');
-      card.classList.remove('hidden');
-      document.getElementById('dayDetailDate').innerText = dateStr;
+      Object.entries(window.adminAttendance || {}).reverse().forEach(([id, a]) => {
+        if (a.empName.toLowerCase().includes(query) || a.userEmail.toLowerCase().includes(query)) {
+          tbody.innerHTML += `
+            <tr>
+              <td class="p-3 font-mono">${a.date}</td>
+              <td class="p-3 font-bold text-white">${a.empName}</td>
+              <td class="p-3">${a.clockIn}</td>
+              <td class="p-3">${a.clockOut || '--'}</td>
+              <td class="p-3 font-mono">${a.durationText || '--'}</td>
+              <td class="p-3 font-bold">${a.punctualityStatus}</td>
+              <td class="p-3 text-slate-400 italic">${a.remarks || ''}</td>
+              <td class="p-3">
+                <button onclick="deleteAttRecord('${id}')" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash"></i></button>
+              </td>
+            </tr>
+          `;
+        }
+      });
+    }
 
-      if (log) {
-        document.getElementById('dayDetailStatus').innerText = log.punctualityStatus;
-        document.getElementById('dayDetailIn').innerText = log.clockIn || '--';
-        document.getElementById('dayDetailOut').innerText = log.clockOut || '--';
-        document.getElementById('dayDetailRemarks').innerText = log.remarks || 'None';
-      } else {
-        document.getElementById('dayDetailStatus').innerText = 'No Record';
-        document.getElementById('dayDetailIn').innerText = '--';
-        document.getElementById('dayDetailOut').innerText = '--';
-        document.getElementById('dayDetailRemarks').innerText = 'No log recorded.';
+    async function deleteAttRecord(id) {
+      if (confirm('Delete this attendance log entry?')) {
+        await db.ref(`attendance_logs/${id}`).remove();
       }
     }
 
-    async function exportAttendanceCSV() {
-      const snap = await db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).once('value');
-      const logs = snap.val() || {};
-      let csv = 'Date,Clock In,Clock Out,Duration,Status,Remarks\n';
+    function renderAdminLeave() {
+      const tbody = document.getElementById('leaveAdminTable');
+      tbody.innerHTML = '';
 
-      Object.values(logs).forEach(l => {
-        csv += `"${l.date}","${l.clockIn}","${l.clockOut || ''}","${l.durationText || ''}","${l.punctualityStatus}","${l.remarks || ''}"\n`;
+      Object.entries(window.adminLeave || {}).reverse().forEach(([id, l]) => {
+        const attLink = l.attachment ? `<a href="${l.attachment}" target="_blank" class="text-amber-400 underline font-bold">View Attachment</a>` : 'None';
+        tbody.innerHTML += `
+          <tr>
+            <td class="p-3 font-mono">${new Date(l.createdAt).toLocaleDateString()}</td>
+            <td class="p-3 font-bold text-white">${l.empName}</td>
+            <td class="p-3">${l.leaveType}</td>
+            <td class="p-3 font-mono text-[10px]">${l.startDate} to ${l.endDate}</td>
+            <td class="p-3 text-slate-400 italic">${l.reason}</td>
+            <td class="p-3">${attLink}</td>
+            <td class="p-3 font-bold">${l.status}</td>
+            <td class="p-3 space-x-1">
+              ${l.status === 'PENDING' ? `
+                <button onclick="updateLeaveStatus('${id}', 'APPROVED')" class="px-2 py-1 bg-emerald-500 text-slate-950 font-bold rounded text-[10px]">Approve</button>
+                <button onclick="updateLeaveStatus('${id}', 'REJECTED')" class="px-2 py-1 bg-rose-500 text-white font-bold rounded text-[10px]">Reject</button>
+              ` : ''}
+              <button onclick="deleteLeaveRecord('${id}')" class="p-1 text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function updateLeaveStatus(id, status) {
+      await db.ref(`leave_requests/${id}`).update({ status });
+    }
+
+    async function deleteLeaveRecord(id) {
+      if (confirm('Delete leave request?')) {
+        await db.ref(`leave_requests/${id}`).remove();
+      }
+    }
+
+    function renderAdminSales() {
+      const tbody = document.getElementById('salesAdminTable');
+      tbody.innerHTML = '';
+      const filterDate = document.getElementById('salesFilterDate').value;
+      const filterBranch = document.getElementById('salesFilterBranch').value;
+
+      Object.entries(window.adminSales || {}).reverse().forEach(([id, s]) => {
+        if (filterDate && s.date !== filterDate) return;
+        if (filterBranch !== 'ALL' && s.branch !== filterBranch) return;
+
+        const c = s.calculations || {};
+        tbody.innerHTML += `
+          <tr>
+            <td class="p-3 font-mono">${s.date}</td>
+            <td class="p-3 font-bold text-white">${s.branch}</td>
+            <td class="p-3 text-slate-400">${s.submittedBy}</td>
+            <td class="p-3 font-mono">${s.chicken ? s.chicken.bags : 0}</td>
+            <td class="p-3 font-bold text-emerald-400">RM ${(c.grossSales || 0).toFixed(2)}</td>
+            <td class="p-3 font-bold text-rose-400">RM ${(c.totalExpenses || 0).toFixed(2)}</td>
+            <td class="p-3 font-black text-amber-400">RM ${(c.grandTotal || 0).toFixed(2)}</td>
+            <td class="p-3">
+              <button onclick="deleteSalesRecord('${id}')" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function deleteSalesRecord(id) {
+      if (confirm('Delete daily sales report?')) {
+        await db.ref(`sales_updates/${id}`).remove();
+      }
+    }
+
+    function exportSalesCSV() {
+      const filterDate = document.getElementById('salesFilterDate').value;
+      const filterBranch = document.getElementById('salesFilterBranch').value;
+      let csv = 'Date,Branch,Submitted By,Chicken Bags,Gross Sales,Expenses,Grand Total\n';
+
+      Object.values(window.adminSales || {}).forEach(s => {
+        if (filterDate && s.date !== filterDate) return;
+        if (filterBranch !== 'ALL' && s.branch !== filterBranch) return;
+        const c = s.calculations || {};
+        csv += `"${s.date}","${s.branch}","${s.submittedBy}","${s.chicken ? s.chicken.bags : 0}","${c.grossSales || 0}","${c.totalExpenses || 0}","${c.grandTotal || 0}"\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.setAttribute('href', url);
-      a.setAttribute('download', `Attendance_${currentUser.email}_${new Date().toISOString().split('T')[0]}.csv`);
+      a.setAttribute('download', `Sales_Report_${new Date().toISOString().split('T')[0]}.csv`);
       a.click();
     }
 
     // -------------------------------------------------------------
-    // LEAVE MANAGEMENT
+    // PAYROLL CALCULATOR & PAYSLIPS
     // -------------------------------------------------------------
-    function toggleAttachmentReq() {
-      const type = document.getElementById('leaveType').value;
-      const fileInput = document.getElementById('leaveFile');
-      fileInput.required = (type === 'Medical Leave');
+    function calculatePayroll() {
+      const basic = parseFloat(document.getElementById('payBasic').value) || 0;
+      const absentDays = parseFloat(document.getElementById('payAbsentDays').value) || 0;
+      const otHours = parseFloat(document.getElementById('payOT').value) || 0;
+      const advance = parseFloat(document.getElementById('payAdvance').value) || 0;
+
+      const absentDeduction = (basic / 26) * absentDays;
+      const otPay = (basic / 26 / 8) * 1.5 * otHours;
+      const gross = Math.max(0, basic - absentDeduction + otPay);
+
+      // Malaysian Statutory Rates
+      const epf = gross * 0.11;
+      const socso = gross * 0.005;
+      const eis = gross * 0.002;
+      const net = Math.max(0, gross - epf - socso - eis - advance);
+
+      document.getElementById('payResGross').innerText = `RM ${gross.toFixed(2)}`;
+      document.getElementById('payResEPF').innerText = `RM ${epf.toFixed(2)}`;
+      document.getElementById('payResSOCSO').innerText = `RM ${socso.toFixed(2)}`;
+      document.getElementById('payResEIS').innerText = `RM ${eis.toFixed(2)}`;
+      document.getElementById('payResNet').innerText = `RM ${net.toFixed(2)}`;
+
+      document.getElementById('payNetAmount').value = net.toFixed(2);
     }
 
-    async function handleLeaveSubmit(e) {
+    async function handlePayslipUpload(e) {
       e.preventDefault();
-      const leaveType = document.getElementById('leaveType').value;
-      const startDate = document.getElementById('leaveStart').value;
-      const endDate = document.getElementById('leaveEnd').value;
-      const reason = document.getElementById('leaveReason').value;
-      const fileInput = document.getElementById('leaveFile');
+      const staffEmail = document.getElementById('payStaffSelect').value;
+      const period = document.getElementById('payPeriod').value;
+      const amount = parseFloat(document.getElementById('payNetAmount').value);
+      const fileInput = document.getElementById('payFile');
 
-      let attachmentBase64 = '';
-      if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        if (file.size > 3 * 1024 * 1024) {
-          alert('File size exceeds 3MB limit.');
-          return;
-        }
-        attachmentBase64 = await convertBase64(file);
+      const staffObj = Object.values(window.adminStaff || {}).find(s => s.email === staffEmail);
+      if (!staffObj) return;
+
+      const file = fileInput.files[0];
+      const fileData = await convertBase64(file);
+
+      // Check existing duplicate
+      const existingKey = Object.keys(window.adminPayslips || {}).find(k => window.adminPayslips[k].staffEmail === staffEmail && window.adminPayslips[k].period === period);
+      if (existingKey) {
+        if (!confirm('Payslip already exists for this staff & period. Replace it?')) return;
       }
 
-      const leaveData = {
-        empId: currentStaffData.employeeId,
-        empName: currentStaffData.name,
-        userEmail: currentUser.email,
-        leaveType, startDate, endDate, reason,
-        attachment: attachmentBase64,
-        status: 'PENDING',
+      const payload = {
+        staffName: staffObj.name,
+        staffEmail: staffObj.email,
+        position: staffObj.position,
+        period, amount,
+        fileName: file.name,
+        contentType: file.type,
+        fileData,
+        uploadedAt: firebase.database.ServerValue.TIMESTAMP,
+        uploadedBy: currentAdminUser.email
+      };
+
+      if (existingKey) {
+        await db.ref(`payslips/${existingKey}`).set(payload);
+      } else {
+        await db.ref('payslips').push().set(payload);
+      }
+
+      alert('Payslip uploaded successfully!');
+      document.getElementById('uploadPayslipForm').reset();
+    }
+
+    function renderAdminPayslips() {
+      const tbody = document.getElementById('payslipsAdminTable');
+      tbody.innerHTML = '';
+
+      Object.entries(window.adminPayslips || {}).reverse().forEach(([id, p]) => {
+        tbody.innerHTML += `
+          <tr>
+            <td class="p-3 font-bold text-white">${p.staffName}</td>
+            <td class="p-3 text-slate-400">${p.staffEmail}</td>
+            <td class="p-3 font-mono">${p.period}</td>
+            <td class="p-3 font-bold text-emerald-400">RM ${p.amount.toFixed(2)}</td>
+            <td class="p-3 text-slate-500 font-mono text-[10px]">${new Date(p.uploadedAt).toLocaleDateString()}</td>
+            <td class="p-3">
+              <button onclick="deletePayslipRecord('${id}')" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function deletePayslipRecord(id) {
+      if (confirm('Delete payslip entry?')) {
+        await db.ref(`payslips/${id}`).remove();
+      }
+    }
+
+    function exportPayslipsCSV() {
+      let csv = 'Staff,Email,Position,Period,Net Salary,Uploaded Date\n';
+      Object.values(window.adminPayslips || {}).forEach(p => {
+        csv += `"${p.staffName}","${p.staffEmail}","${p.position}","${p.period}","${p.amount}","${new Date(p.uploadedAt).toISOString().split('T')[0]}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('href', url);
+      a.setAttribute('download', `Payslips_Registry_${new Date().toISOString().split('T')[0]}.csv`);
+      a.click();
+    }
+
+    // -------------------------------------------------------------
+    // HELPERS & MODALS
+    // -------------------------------------------------------------
+    function updateStaffDropdowns() {
+      const sel = document.getElementById('payStaffSelect');
+      sel.innerHTML = '';
+      Object.values(window.adminStaff || {}).forEach(s => {
+        sel.innerHTML += `<option value="${s.email}">${s.name} (${s.email})</option>`;
+      });
+    }
+
+    function updateBranchDropdowns() {
+      const sel = document.getElementById('salesFilterBranch');
+      sel.innerHTML = `<option value="ALL">All Branches</option>`;
+      Object.values(window.adminBranches || {}).forEach(b => {
+        sel.innerHTML += `<option value="${b.name}">${b.name}</option>`;
+      });
+    }
+
+    async function openAddBranchModal() {
+      const name = prompt('Enter Branch Name:');
+      if (!name) return;
+      const code = prompt('Enter Branch Code (e.g., AMP-01):');
+      if (!code) return;
+      const address = prompt('Enter Malaysian Address:');
+
+      const payload = {
+        name, code, address: address || '',
+        status: 'ACTIVE',
         createdAt: firebase.database.ServerValue.TIMESTAMP
       };
 
-      await db.ref('leave_requests').push().set(leaveData);
-      alert('Leave request submitted!');
-      document.getElementById('leaveForm').reset();
+      await db.ref('branches').push().set(payload);
+      alert('Branch created successfully!');
     }
 
-    function renderLeaveList(requests) {
-      const container = document.getElementById('leaveList');
-      container.innerHTML = '';
-      const list = Object.values(requests).reverse();
+    async function openAddStaffModal() {
+      const name = prompt('Enter Staff Full Name:');
+      if (!name) return;
+      const email = prompt('Enter Staff Email:');
+      if (!email) return;
+      const position = prompt('Enter Position:', 'Kitchen Crew');
+      const branch = prompt('Enter Branch Name:', 'Ampang Utama');
 
-      if (list.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 italic">No leave applications found.</p>`;
-        return;
-      }
-
-      list.forEach(r => {
-        let badgeColor = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
-        if (r.status === 'APPROVED') badgeColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-        if (r.status === 'REJECTED') badgeColor = 'bg-rose-500/20 text-rose-400 border-rose-500/30';
-
-        container.innerHTML += `
-          <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
-            <div>
-              <p class="text-xs font-bold text-white">${r.leaveType}</p>
-              <p class="text-[10px] text-slate-400">${r.startDate} to ${r.endDate}</p>
-              <p class="text-[10px] text-slate-500 italic mt-1">"${r.reason}"</p>
-            </div>
-            <span class="px-2.5 py-1 text-[10px] font-bold rounded-full border ${badgeColor}">${r.status}</span>
-          </div>
-        `;
-      });
-    }
-
-    // -------------------------------------------------------------
-    // DAILY SALES & CALCULATIONS (SHARED ENGINE)
-    // -------------------------------------------------------------
-    function initSalesInventoryForm() {
-      const container = document.getElementById('inventoryContainer');
-      container.innerHTML = '';
-      document.getElementById('salesDate').value = new Date().toISOString().split('T')[0];
-
-      PRODUCTS.forEach(p => {
-        container.innerHTML += `
-          <div class="p-3 bg-slate-800/60 rounded-xl space-y-2 border border-slate-700/50">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-bold text-amber-400">${p.name}</span>
-              <span class="text-[10px] text-slate-400">Sold: <strong id="sold_${p.id}" class="text-white">0</strong></span>
-            </div>
-            <div class="grid grid-cols-4 gap-1.5">
-              <input type="number" min="0" placeholder="Prev" id="prev_${p.id}" oninput="recalculateSales()" class="bg-slate-900 border border-slate-700 rounded p-1.5 text-[10px] text-white text-center">
-              <input type="number" min="0" placeholder="New" id="new_${p.id}" oninput="recalculateSales()" class="bg-slate-900 border border-slate-700 rounded p-1.5 text-[10px] text-white text-center">
-              <input type="number" min="0" placeholder="Promo" id="promo_${p.id}" oninput="recalculateSales()" class="bg-slate-900 border border-slate-700 rounded p-1.5 text-[10px] text-white text-center">
-              <input type="number" min="0" placeholder="Bal" id="bal_${p.id}" oninput="recalculateSales()" class="bg-slate-900 border border-slate-700 rounded p-1.5 text-[10px] text-white text-center">
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    function recalculateSales() {
-      const bags = parseFloat(document.getElementById('salesBags').value) || 0;
-      const chickenPieces = bags * 20;
-      const chickenSales = chickenPieces * 4.50;
-
-      const platMisi = parseFloat(document.getElementById('platMisi').value) || 0;
-      const platLala = parseFloat(document.getElementById('platLala').value) || 0;
-      const platPanda = parseFloat(document.getElementById('platPanda').value) || 0;
-      const platGrab = parseFloat(document.getElementById('platGrab').value) || 0;
-      const platShopee = parseFloat(document.getElementById('platShopee').value) || 0;
-      const platformSales = platMisi + platLala + platPanda + platGrab + platShopee;
-
-      let productSales = 0;
-      PRODUCTS.forEach(p => {
-        const prev = parseFloat(document.getElementById(`prev_${p.id}`).value) || 0;
-        const newQty = parseFloat(document.getElementById(`new_${p.id}`).value) || 0;
-        const promo = parseFloat(document.getElementById(`promo_${p.id}`).value) || 0;
-        const bal = parseFloat(document.getElementById(`bal_${p.id}`).value) || 0;
-
-        let sold = (prev + newQty) - (promo + bal);
-        if (sold < 0) sold = 0;
-        document.getElementById(`sold_${p.id}`).innerText = sold;
-
-        productSales += (sold * p.price);
-      });
-
-      const promo10 = parseFloat(document.getElementById('promo10').value) || 0;
-      const promoSales = promo10 * 53.90;
-
-      const expGas = parseFloat(document.getElementById('expGas').value) || 0;
-      const expIce = parseFloat(document.getElementById('expIce').value) || 0;
-      const expGoods = parseFloat(document.getElementById('expGoods').value) || 0;
-      const expFuel = parseFloat(document.getElementById('expFuel').value) || 0;
-      const expLaundry = parseFloat(document.getElementById('expLaundry').value) || 0;
-      const expOil = parseFloat(document.getElementById('expOil').value) || 0;
-      const expMeal = parseFloat(document.getElementById('expMeal').value) || 0;
-      const totalExpenses = expGas + expIce + expGoods + expFuel + expLaundry + expOil + expMeal;
-
-      const grossSales = chickenSales + platformSales + productSales + promoSales;
-      const grandTotal = grossSales - totalExpenses;
-
-      document.getElementById('dispChicken').innerText = `RM ${chickenSales.toFixed(2)}`;
-      document.getElementById('dispPlatform').innerText = `RM ${platformSales.toFixed(2)}`;
-      document.getElementById('dispProduct').innerText = `RM ${(productSales + promoSales).toFixed(2)}`;
-      document.getElementById('dispGross').innerText = `RM ${grossSales.toFixed(2)}`;
-      document.getElementById('dispExpenses').innerText = `RM ${totalExpenses.toFixed(2)}`;
-      document.getElementById('dispGrand').innerText = `RM ${grandTotal.toFixed(2)}`;
-
-      return { chickenSales, platformSales, productSales: productSales + promoSales, grossSales, totalExpenses, grandTotal };
-    }
-
-    async function handleSalesSubmit(e) {
-      e.preventDefault();
-      const calc = recalculateSales();
-      const inventoryData = {};
-
-      PRODUCTS.forEach(p => {
-        const prev = parseFloat(document.getElementById(`prev_${p.id}`).value) || 0;
-        const newQty = parseFloat(document.getElementById(`new_${p.id}`).value) || 0;
-        const promo = parseFloat(document.getElementById(`promo_${p.id}`).value) || 0;
-        const bal = parseFloat(document.getElementById(`bal_${p.id}`).value) || 0;
-        let sold = (prev + newQty) - (promo + bal);
-        if (sold < 0) sold = 0;
-
-        inventoryData[p.id] = { prev, new: newQty, promo, balance: bal, sold };
-      });
-
-      const salesPayload = {
-        date: document.getElementById('salesDate').value,
-        branch: document.getElementById('salesBranch').value,
-        submittedBy: currentUser.email,
-        chicken: { bags: parseFloat(document.getElementById('salesBags').value) || 0, pieces: (parseFloat(document.getElementById('salesBags').value) || 0) * 20 },
-        platforms: {
-          misi: parseFloat(document.getElementById('platMisi').value) || 0,
-          lalamove: parseFloat(document.getElementById('platLala').value) || 0,
-          foodpanda: parseFloat(document.getElementById('platPanda').value) || 0,
-          grabfood: parseFloat(document.getElementById('platGrab').value) || 0,
-          shopeefood: parseFloat(document.getElementById('platShopee').value) || 0
-        },
-        inventory: inventoryData,
-        expenses: {
-          gas: parseFloat(document.getElementById('expGas').value) || 0,
-          ice: parseFloat(document.getElementById('expIce').value) || 0,
-          goods: parseFloat(document.getElementById('expGoods').value) || 0,
-          fuel: parseFloat(document.getElementById('expFuel').value) || 0,
-          laundry: parseFloat(document.getElementById('expLaundry').value) || 0,
-          oil: parseFloat(document.getElementById('expOil').value) || 0,
-          meal: parseFloat(document.getElementById('expMeal').value) || 0
-        },
-        qualityAndWastage: { wastage: document.getElementById('salesWastage').value },
-        calculations: calc,
+      const payload = {
+        employeeId: 'HMZ-' + Math.floor(1000 + Math.random() * 9000),
+        name, email, phone: '--',
+        position: position || 'Staff',
+        branch: branch || 'Ampang Utama',
+        status: 'ACTIVE',
         createdAt: firebase.database.ServerValue.TIMESTAMP
       };
 
-      await db.ref('sales_updates').push().set(salesPayload);
-      alert('Daily Sales report submitted successfully!');
-      document.getElementById('salesForm').reset();
-      recalculateSales();
+      await db.ref('staff').push().set(payload);
+      alert('Staff added successfully!');
     }
 
-    // -------------------------------------------------------------
-    // PAYSLIPS
-    // -------------------------------------------------------------
-    function renderPayslips() {
-      const container = document.getElementById('payslipList');
-      container.innerHTML = '';
-      const yearFilter = document.getElementById('payslipYearFilter').value;
+    async function openManualAttendanceModal() {
+      const email = prompt('Enter Staff Email for manual entry:');
+      if (!email) return;
+      const date = prompt('Enter Date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+      const clockIn = prompt('Enter Clock In Time (HH:MM:SS):', '08:30:00');
+      const clockOut = prompt('Enter Clock Out Time (HH:MM:SS):', '17:30:00');
+      const status = prompt('Enter Status (ON TIME / LATE / ABSENT / MEDICAL LEAVE):', 'ON TIME');
 
-      const payslips = Object.values(window.staffPayslips || {}).filter(p => {
-        if (yearFilter === 'ALL') return true;
-        return p.period.startsWith(yearFilter);
-      });
+      const staffObj = Object.values(window.adminStaff || {}).find(s => s.email === email);
 
-      if (payslips.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 italic">No payslips found for this period.</p>`;
-        document.getElementById('dashPayslipStatus').innerText = 'Unavailable';
-        return;
-      }
+      const payload = {
+        employeeId: staffObj ? staffObj.employeeId : 'HMZ-MANUAL',
+        empName: staffObj ? staffObj.name : email,
+        userEmail: email,
+        date, clockIn, clockOut,
+        durationText: '09:00:00',
+        punctualityStatus: status,
+        remarks: 'Manually logged by Admin',
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        createdByAdmin: true,
+        autoGenerated: false,
+        editedByAdmin: true
+      };
 
-      document.getElementById('dashPayslipStatus').innerText = `${payslips[0].period} (RM ${payslips[0].amount.toFixed(2)})`;
-
-      payslips.forEach(p => {
-        container.innerHTML += `
-          <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                <i class="fa-solid fa-file-invoice-dollar text-lg"></i>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-white">Pay Period: ${p.period}</p>
-                <p class="text-[10px] text-slate-400">Net: <strong class="text-emerald-400">RM ${p.amount.toFixed(2)}</strong></p>
-              </div>
-            </div>
-            <a href="${p.fileData}" download="${p.fileName}" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl transition">
-              Download
-            </a>
-          </div>
-        `;
-      });
-    }
-
-    // -------------------------------------------------------------
-    // UTILITIES
-    // -------------------------------------------------------------
-    function switchTab(tabId) {
-      ['dashboard', 'attendance', 'leave', 'sales', 'payslip', 'profile'].forEach(t => {
-        document.getElementById(`tab-${t}`).classList.add('hidden');
-        document.getElementById(`nav-${t}`).className = 'flex flex-col items-center space-y-1 text-slate-400 hover:text-white';
-      });
-
-      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-      document.getElementById(`nav-${tabId}`).className = 'flex flex-col items-center space-y-1 text-amber-500';
+      await db.ref('attendance_logs').push().set(payload);
+      alert('Manual attendance entry saved!');
     }
 
     function convertBase64(file) {
