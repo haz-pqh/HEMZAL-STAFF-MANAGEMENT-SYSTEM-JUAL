@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-900">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Hemzal Staff Portal</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Firebase Web SDK v9 (Compat Mode) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="h-full text-slate-100 antialiased selection:bg-amber-500 selection:text-white pb-20">
+
+  <!-- AUTH CONTAINER (Shown when unauthenticated) -->
+  <div id="authScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 bg-slate-950">
+    <div class="w-full max-w-sm text-center space-y-8">
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-3xl shadow-2xl shadow-amber-500/20">
+        <i class="fa-solid fa-burger"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-black tracking-tight text-white uppercase">Hemzal Staff Portal</h1>
+        <p class="mt-2 text-sm text-slate-400">Log in with authorized corporate Google Account to proceed.</p>
+      </div>
+      <button onclick="handleGoogleLogin()" class="w-full py-4 px-6 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-2xl shadow-xl flex items-center justify-center space-x-3 transition active:scale-95">
+        <i class="fa-brands fa-google text-red-500 text-lg"></i>
+        <span>Sign In with Google</span>
+      </button>
+      <div id="authError" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl"></div>
+    </div>
+  </div>
+
+  <!-- MAIN APP WRAPPER (Mobile Viewport Optimized: ~375px Container constraint on desktop) -->
+  <div id="appScreen" class="hidden max-w-md mx-auto min-h-screen flex flex-col relative bg-slate-900 shadow-2xl">
+    
+    <!-- TOP APP BAR -->
+    <header class="sticky top-0 z-40 glass-card px-5 py-4 flex items-center justify-between border-b border-slate-800">
+      <div class="flex items-center space-x-3">
+        <div id="userAvatar" class="w-9 h-9 rounded-full bg-amber-500 flex items-center justify-center font-bold text-slate-950 text-sm">U</div>
+        <div>
+          <h2 id="userName" class="text-sm font-bold text-slate-100 leading-tight">Loading...</h2>
+          <p id="userRole" class="text-[10px] uppercase font-semibold text-amber-400 tracking-wider">Staff</p>
+        </div>
+      </div>
+      <button onclick="handleLogout()" class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition">
+        <i class="fa-solid fa-right-from-bracket text-xs"></i>
+      </button>
+    </header>
+
+    <!-- CONTENT PANELS -->
+    <main class="flex-1 p-5 space-y-6">
+
+      <!-- DASHBOARD TAB -->
+      <section id="tab-dashboard" class="space-y-5">
+        <!-- Date Header -->
+        <div class="glass-card p-4 rounded-2xl border-l-4 border-l-amber-500">
+          <p id="liveDate" class="text-xs text-slate-400 font-medium">Monday, 30 March 2026</p>
+          <h3 id="liveClock" class="text-2xl font-black text-white font-mono mt-0.5">00:00:00 AM</h3>
+        </div>
+
+        <!-- Attendance Quick Card -->
+        <div class="glass-card p-5 rounded-3xl space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Shift Tracker</span>
+            <span id="dashPunctuality" class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400">NOT CLOCKED IN</span>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3 py-2 border-y border-slate-800">
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase">Clock In</p>
+              <p id="dashClockIn" class="text-sm font-semibold text-slate-200">--:--</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase">Clock Out</p>
+              <p id="dashClockOut" class="text-sm font-semibold text-slate-200">--:--</p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase">Duration</p>
+              <p id="dashDuration" class="text-lg font-bold text-amber-400 font-mono">00:00:00</p>
+            </div>
+            <div class="flex space-x-2">
+              <button id="btnClockIn" onclick="handleClockIn()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs transition active:scale-95 shadow-lg shadow-emerald-500/20">
+                Clock In
+              </button>
+              <button id="btnClockOut" onclick="handleClockOut()" disabled class="px-4 py-2.5 bg-slate-800 text-slate-500 font-bold rounded-xl text-xs transition cursor-not-allowed">
+                Clock Out
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Metrics -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="glass-card p-4 rounded-2xl">
+            <i class="fa-solid fa-calendar-check text-amber-400 text-lg mb-2"></i>
+            <p class="text-[10px] text-slate-400 uppercase font-semibold">Leave Balance</p>
+            <p id="dashLeaveBal" class="text-xl font-bold text-slate-100 mt-1">14 Days</p>
+          </div>
+          <div class="glass-card p-4 rounded-2xl">
+            <i class="fa-solid fa-file-invoice-dollar text-emerald-400 text-lg mb-2"></i>
+            <p class="text-[10px] text-slate-400 uppercase font-semibold">Latest Payslip</p>
+            <p id="dashPayslipStatus" class="text-xs font-bold text-slate-200 mt-2 truncate">Unavailable</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ATTENDANCE TAB -->
+      <section id="tab-attendance" class="hidden space-y-5">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-white">Attendance Calendar</h3>
+          <button onclick="exportAttendanceCSV()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-amber-400 font-semibold text-xs rounded-xl flex items-center space-x-2">
+            <i class="fa-solid fa-file-csv"></i>
+            <span>Export CSV</span>
+          </button>
+        </div>
+
+        <!-- Month Selector -->
+        <div class="glass-card p-3 rounded-2xl flex items-center justify-between">
+          <button onclick="changeCalMonth(-1)" class="p-2 text-slate-400 hover:text-white"><i class="fa-solid fa-chevron-left"></i></button>
+          <span id="calMonthLabel" class="text-sm font-bold text-slate-200">March 2026</span>
+          <button onclick="changeCalMonth(1)" class="p-2 text-slate-400 hover:text-white"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="glass-card p-4 rounded-2xl space-y-3">
+          <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 uppercase">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div id="calendarGrid" class="grid grid-cols-7 gap-1.5"></div>
+        </div>
+
+        <!-- Selected Day Details -->
+        <div id="dayDetailCard" class="glass-card p-4 rounded-2xl hidden">
+          <h4 id="dayDetailDate" class="text-xs font-bold text-amber-400 uppercase mb-2">Details</h4>
+          <div class="space-y-1 text-xs text-slate-300">
+            <p>Status: <span id="dayDetailStatus" class="font-bold">--</span></p>
+            <p>Clock In: <span id="dayDetailIn">--</span></p>
+            <p>Clock Out: <span id="dayDetailOut">--</span></p>
+            <p>Remarks: <span id="dayDetailRemarks">--</span></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- LEAVE APPLICATION TAB -->
+      <section id="tab-leave" class="hidden space-y-5">
+        <h3 class="text-lg font-bold text-white">Apply For Leave</h3>
+        <form id="leaveForm" onsubmit="handleLeaveSubmit(event)" class="glass-card p-5 rounded-3xl space-y-4">
+          <div>
+            <label class="text-xs text-slate-400 font-semibold block mb-1">Leave Type</label>
+            <select id="leaveType" onchange="toggleAttachmentReq()" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+              <option value="Annual Leave">Annual Leave</option>
+              <option value="Medical Leave">Medical Leave</option>
+              <option value="Emergency Leave">Emergency Leave</option>
+              <option value="Other Leave">Other Leave</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-400 font-semibold block mb-1">Start Date</label>
+              <input type="date" id="leaveStart" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 font-semibold block mb-1">End Date</label>
+              <input type="date" id="leaveEnd" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 font-semibold block mb-1">Reason</label>
+            <textarea id="leaveReason" rows="2" required class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500" placeholder="State reason..."></textarea>
+          </div>
+          <div id="attachmentGroup">
+            <label class="text-xs text-slate-400 font-semibold block mb-1">Attachment (Required for Medical)</label>
+            <input type="file" id="leaveFile" accept="image/*,application/pdf" class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-amber-400 hover:file:bg-slate-700">
+          </div>
+          <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-amber-500/20">
+            Submit Request
+          </button>
+        </form>
+
+        <!-- Leave History -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Leave Applications History</h4>
+          <div id="leaveList" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- DAILY SALES TAB -->
+      <section id="tab-sales" class="hidden space-y-5">
+        <h3 class="text-lg font-bold text-white">Daily Sales & Inventory</h3>
+        <form id="salesForm" onsubmit="handleSalesSubmit(event)" class="space-y-4">
+          
+          <!-- General -->
+          <div class="glass-card p-4 rounded-2xl space-y-3">
+            <h4 class="text-xs font-bold text-amber-400 uppercase">General Info</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[10px] text-slate-400">Date</label>
+                <input type="date" id="salesDate" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400">Branch</label>
+                <select id="salesBranch" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"></select>
+              </div>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400">Chicken Bags (1 Bag = 20 Pcs)</label>
+              <input type="number" min="0" id="salesBags" value="0" oninput="recalculateSales()" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            </div>
+          </div>
+
+          <!-- Platforms -->
+          <div class="glass-card p-4 rounded-2xl space-y-3">
+            <h4 class="text-xs font-bold text-amber-400 uppercase">Platform Sales (RM)</h4>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="number" step="0.01" min="0" placeholder="Misi" id="platMisi" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="Lalamove" id="platLala" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="FoodPanda" id="platPanda" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="GrabFood" id="platGrab" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="ShopeeFood" id="platShopee" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white col-span-2">
+            </div>
+          </div>
+
+          <!-- Inventory & Seasoning Matrix -->
+          <div class="glass-card p-4 rounded-2xl space-y-3">
+            <h4 class="text-xs font-bold text-amber-400 uppercase">Product Inventory (Units)</h4>
+            <div id="inventoryContainer" class="space-y-2"></div>
+          </div>
+
+          <!-- Promo & Expenses -->
+          <div class="glass-card p-4 rounded-2xl space-y-3">
+            <h4 class="text-xs font-bold text-amber-400 uppercase">Promo & Expenses</h4>
+            <div>
+              <label class="text-[10px] text-slate-400">10pcs Promo Set Quantity (RM 53.90/ea)</label>
+              <input type="number" min="0" id="promo10" value="0" oninput="recalculateSales()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2">
+              <input type="number" step="0.01" min="0" placeholder="Gas" id="expGas" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="Ice" id="expIce" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="Goods Purchase" id="expGoods" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="Fuel / Vehicle" id="expFuel" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="Laundry" id="expLaundry" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="Cooking Oil" id="expOil" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+              <input type="number" step="0.01" min="0" placeholder="Staff Meal" id="expMeal" oninput="recalculateSales()" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white col-span-2">
+            </div>
+          </div>
+
+          <!-- Quality / Remarks -->
+          <div class="glass-card p-4 rounded-2xl space-y-2">
+            <h4 class="text-xs font-bold text-amber-400 uppercase">Wastage & Feedback</h4>
+            <textarea id="salesWastage" rows="2" placeholder="Wastage, spoiled items, feedback..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"></textarea>
+          </div>
+
+          <!-- Summary Display -->
+          <div class="glass-card p-5 rounded-3xl bg-amber-500/10 border-amber-500/30 space-y-2">
+            <div class="flex justify-between text-xs"><span>Chicken Sales:</span><span id="dispChicken" class="font-bold">RM 0.00</span></div>
+            <div class="flex justify-between text-xs"><span>Platform Sales:</span><span id="dispPlatform" class="font-bold">RM 0.00</span></div>
+            <div class="flex justify-between text-xs"><span>Product Sales:</span><span id="dispProduct" class="font-bold">RM 0.00</span></div>
+            <div class="flex justify-between text-xs"><span>Gross Sales:</span><span id="dispGross" class="font-bold text-emerald-400">RM 0.00</span></div>
+            <div class="flex justify-between text-xs"><span>Total Expenses:</span><span id="dispExpenses" class="font-bold text-rose-400">RM 0.00</span></div>
+            <div class="border-t border-slate-700 pt-2 flex justify-between text-sm font-black text-white">
+              <span>Grand Total:</span><span id="dispGrand" class="text-amber-400">RM 0.00</span>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl text-sm transition shadow-xl shadow-emerald-500/20">
+            Submit Daily Sales Report
+          </button>
+        </form>
+      </section>
+
+      <!-- PAYSLIP TAB -->
+      <section id="tab-payslip" class="hidden space-y-5">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-white">My Payslips</h3>
+          <select id="payslipYearFilter" onchange="renderPayslips()" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-1.5 text-slate-200">
+            <option value="ALL">All Years</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+          </select>
+        </div>
+        <div id="payslipList" class="space-y-3"></div>
+      </section>
+
+      <!-- PROFILE TAB -->
+      <section id="tab-profile" class="hidden space-y-5">
+        <div class="glass-card p-6 rounded-3xl text-center space-y-4">
+          <div id="profAvatar" class="w-20 h-20 rounded-full bg-amber-500 text-slate-950 text-3xl font-black flex items-center justify-center mx-auto shadow-xl shadow-amber-500/20">U</div>
+          <div>
+            <h3 id="profName" class="text-lg font-bold text-white">--</h3>
+            <p id="profEmail" class="text-xs text-slate-400">--</p>
+          </div>
+          <span id="profStatus" class="inline-block px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE EMPLOYEE</span>
+        </div>
+
+        <div class="glass-card p-5 rounded-3xl space-y-3 text-xs">
+          <div class="flex justify-between py-2 border-b border-slate-800">
+            <span class="text-slate-400">Employee ID</span>
+            <span id="profEmpId" class="font-bold text-white">--</span>
+          </div>
+          <div class="flex justify-between py-2 border-b border-slate-800">
+            <span class="text-slate-400">Position</span>
+            <span id="profPosition" class="font-bold text-white">--</span>
+          </div>
+          <div class="flex justify-between py-2 border-b border-slate-800">
+            <span class="text-slate-400">Branch</span>
+            <span id="profBranch" class="font-bold text-white">--</span>
+          </div>
+          <div class="flex justify-between py-2">
+            <span class="text-slate-400">Phone</span>
+            <span id="profPhone" class="font-bold text-white">--</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM TAB NAVIGATION -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass-card border-t border-slate-800 px-3 py-2 flex justify-around items-center z-40">
+      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center space-y-1 text-amber-500">
+        <i class="fa-solid fa-house text-base"></i>
+        <span class="text-[9px] font-bold">Home</span>
+      </button>
+      <button onclick="switchTab('attendance')" id="nav-attendance" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-calendar-days text-base"></i>
+        <span class="text-[9px] font-bold">Attendance</span>
+      </button>
+      <button onclick="switchTab('leave')" id="nav-leave" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-paper-plane text-base"></i>
+        <span class="text-[9px] font-bold">Leave</span>
+      </button>
+      <button onclick="switchTab('sales')" id="nav-sales" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-chart-line text-base"></i>
+        <span class="text-[9px] font-bold">Sales</span>
+      </button>
+      <button onclick="switchTab('payslip')" id="nav-payslip" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-wallet text-base"></i>
+        <span class="text-[9px] font-bold">Payslip</span>
+      </button>
+      <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-user text-base"></i>
+        <span class="text-[9px] font-bold">Profile</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- SCRIPT ENGINE -->
+  <script>
+    // -------------------------------------------------------------
+    // FIREBASE INITIALIZATION & SHARED LOGIC
+    // -------------------------------------------------------------
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // System Products Config
+    const PRODUCTS = [
+      { id: 'cheese', name: 'Cheese', price: 2.0 },
+      { id: 'korean', name: 'Korean', price: 2.0 },
+      { id: 'garlic', name: 'Garlic', price: 2.0 },
+      { id: 'furikake', name: 'Furikake', price: 3.0 },
+      { id: 'togarashi', name: 'Togarashi', price: 3.0 },
+      { id: 'coleslaw', name: 'Coleslaw', price: 0.0 }
+    ];
+
+    let currentUser = null;
+    let currentStaffData = null;
+    let liveTimerInterval = null;
+    let selectedCalMonth = new Date();
+    let currentTodayLog = null;
+
+    // -------------------------------------------------------------
+    // AUTHENTICATION & PRESENCE
+    // -------------------------------------------------------------
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('authScreen').classList.add('hidden');
+        document.getElementById('appScreen').classList.remove('hidden');
+        
+        await loadStaffProfile();
+        setupRealtimeListeners();
+        startClock();
+        setupPresence(user.uid);
+        initSalesInventoryForm();
+      } else {
+        currentUser = null;
+        document.getElementById('authScreen').classList.remove('hidden');
+        document.getElementById('appScreen').classList.add('hidden');
+      }
+    });
+
+    function handleGoogleLogin() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(err => {
+        const errEl = document.getElementById('authError');
+        errEl.innerText = err.message;
+        errEl.classList.remove('hidden');
+      });
+    }
+
+    function handleLogout() {
+      if (currentUser) {
+        db.ref(`presence/${currentUser.uid}`).set({ status: 'offline', lastSeen: firebase.database.ServerValue.TIMESTAMP });
+      }
+      auth.signOut();
+    }
+
+    function setupPresence(uid) {
+      const pRef = db.ref(`presence/${uid}`);
+      pRef.set({ status: 'online', email: currentUser.email, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+      pRef.onDisconnect().set({ status: 'offline', email: currentUser.email, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+    }
+
+    async function loadStaffProfile() {
+      const snap = await db.ref('staff').orderByChild('email').equalTo(currentUser.email).once('value');
+      const data = snap.val();
+      if (data) {
+        const key = Object.keys(data)[0];
+        currentStaffData = data[key];
+      } else {
+        currentStaffData = {
+          employeeId: 'HMZ-' + Math.floor(1000 + Math.random() * 9000),
+          name: currentUser.displayName || 'Staff Member',
+          email: currentUser.email,
+          phone: '--', position: 'Staff', branch: 'Ampang Utama', status: 'ACTIVE'
+        };
+      }
+      
+      // Update UI Header & Profile
+      document.getElementById('userName').innerText = currentStaffData.name;
+      document.getElementById('userAvatar').innerText = currentStaffData.name.charAt(0).toUpperCase();
+      document.getElementById('profName').innerText = currentStaffData.name;
+      document.getElementById('profEmail').innerText = currentStaffData.email;
+      document.getElementById('profEmpId').innerText = currentStaffData.employeeId;
+      document.getElementById('profPosition').innerText = currentStaffData.position;
+      document.getElementById('profBranch').innerText = currentStaffData.branch;
+      document.getElementById('profPhone').innerText = currentStaffData.phone;
+      document.getElementById('profAvatar').innerText = currentStaffData.name.charAt(0).toUpperCase();
+    }
+
+    // -------------------------------------------------------------
+    // CLOCK & TIMER LOGIC
+    // -------------------------------------------------------------
+    function startClock() {
+      setInterval(() => {
+        const now = new Date();
+        document.getElementById('liveDate').innerText = now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+        document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-US', { hour12: true });
+      }, 1000);
+    }
+
+    function setupRealtimeListeners() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      
+      // Attendance Listener
+      db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).on('value', snap => {
+        const logs = snap.val() || {};
+        currentTodayLog = Object.values(logs).find(l => l.date === todayStr);
+        updateDashboardAttendance(currentTodayLog);
+        renderCalendar();
+      });
+
+      // Leave Listener
+      db.ref('leave_requests').orderByChild('userEmail').equalTo(currentUser.email).on('value', snap => {
+        renderLeaveList(snap.val() || {});
+      });
+
+      // Branch Listener for Sales Dropdown
+      db.ref('branches').on('value', snap => {
+        const branches = snap.val() || {};
+        const sel = document.getElementById('salesBranch');
+        sel.innerHTML = '';
+        Object.values(branches).filter(b => b.status === 'ACTIVE').forEach(b => {
+          sel.innerHTML += `<option value="${b.name}">${b.name} (${b.code})</option>`;
+        });
+      });
+
+      // Payslips Listener
+      db.ref('payslips').orderByChild('staffEmail').equalTo(currentUser.email).on('value', snap => {
+        window.staffPayslips = snap.val() || {};
+        renderPayslips();
+      });
+    }
+
+    function updateDashboardAttendance(log) {
+      clearInterval(liveTimerInterval);
+      const btnIn = document.getElementById('btnClockIn');
+      const btnOut = document.getElementById('btnClockOut');
+      const pBadge = document.getElementById('dashPunctuality');
+
+      if (!log) {
+        document.getElementById('dashClockIn').innerText = '--:--';
+        document.getElementById('dashClockOut').innerText = '--:--';
+        document.getElementById('dashDuration').innerText = '00:00:00';
+        pBadge.innerText = 'NOT CLOCKED IN';
+        pBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400';
+        btnIn.disabled = false;
+        btnIn.className = 'px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs transition active:scale-95 shadow-lg shadow-emerald-500/20';
+        btnOut.disabled = true;
+        btnOut.className = 'px-4 py-2.5 bg-slate-800 text-slate-500 font-bold rounded-xl text-xs cursor-not-allowed';
+        return;
+      }
+
+      document.getElementById('dashClockIn').innerText = log.clockIn;
+      document.getElementById('dashClockOut').innerText = log.clockOut || '--:--';
+      pBadge.innerText = log.punctualityStatus;
+
+      if (log.punctualityStatus === 'ON TIME') {
+        pBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+      } else if (log.punctualityStatus === 'LATE') {
+        pBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30';
+      } else {
+        pBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30';
+      }
+
+      btnIn.disabled = true;
+      btnIn.className = 'px-4 py-2.5 bg-slate-800 text-slate-500 font-bold rounded-xl text-xs cursor-not-allowed';
+
+      if (log.clockIn && !log.clockOut) {
+        btnOut.disabled = false;
+        btnOut.className = 'px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl text-xs transition active:scale-95 shadow-lg shadow-rose-500/20';
+        
+        // Start Live Duration Timer
+        const inTimeParts = log.clockIn.split(':');
+        const startTime = new Date();
+        startTime.setHours(parseInt(inTimeParts[0]), parseInt(inTimeParts[1]), parseInt(inTimeParts[2]));
+
+        liveTimerInterval = setInterval(() => {
+          const diffMs = new Date() - startTime;
+          document.getElementById('dashDuration').innerText = formatMs(diffMs);
+        }, 1000);
+      } else {
+        btnOut.disabled = true;
+        btnOut.className = 'px-4 py-2.5 bg-slate-800 text-slate-500 font-bold rounded-xl text-xs cursor-not-allowed';
+        document.getElementById('dashDuration').innerText = log.durationText || '00:00:00';
+      }
+    }
+
+    function formatMs(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+      const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+      const s = String(totalSec % 60).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
+    // -------------------------------------------------------------
+    // ATTENDANCE CLOCK IN / OUT ACTIONS
+    // -------------------------------------------------------------
+    async function handleClockIn() {
+      const now = new Date();
+      const hours = now.getHours();
+      const mins = now.getMinutes();
+      const timeNum = hours + mins / 60;
+
+      // Rules: 8:00 (8.0) to 9:30 (9.5) = ON TIME, >9.5 to 11.0 = LATE, else barred
+      if (timeNum < 8.0 || timeNum > 11.0) {
+        alert('Clock-in is strictly restricted to between 8:00 AM and 11:00 AM.');
+        return;
+      }
+
+      let punctuality = 'ON TIME';
+      if (timeNum > 9.5) punctuality = 'LATE';
+
+      const todayStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().split(' ')[0];
+
+      const logData = {
+        employeeId: currentStaffData.employeeId,
+        empName: currentStaffData.name,
+        userEmail: currentUser.email,
+        date: todayStr,
+        clockIn: timeStr,
+        clockOut: '',
+        durationText: '00:00:00',
+        punctualityStatus: punctuality,
+        remarks: `Clocked in via Mobile Portal`,
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        createdByAdmin: false,
+        autoGenerated: false,
+        editedByAdmin: false
+      };
+
+      const newRef = db.ref('attendance_logs').push();
+      await newRef.set(logData);
+      alert(`Clocked In successfully as ${punctuality}!`);
+    }
+
+    async function handleClockOut() {
+      if (!currentTodayLog) return;
+      const snap = await db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).once('value');
+      const logs = snap.val() || {};
+      const key = Object.keys(logs).find(k => logs[k].date === currentTodayLog.date && !logs[k].clockOut);
+
+      if (!key) return;
+
+      const now = new Date();
+      const outTimeStr = now.toTimeString().split(' ')[0];
+
+      const inParts = logs[key].clockIn.split(':');
+      const inDate = new Date();
+      inDate.setHours(parseInt(inParts[0]), parseInt(inParts[1]), parseInt(inParts[2]));
+      const diffMs = now - inDate;
+      const durationText = formatMs(diffMs);
+
+      await db.ref(`attendance_logs/${key}`).update({
+        clockOut: outTimeStr,
+        durationText: durationText
+      });
+
+      alert('Clocked Out successfully!');
+    }
+
+    // -------------------------------------------------------------
+    // CALENDAR & EXPORT
+    // -------------------------------------------------------------
+    function changeCalMonth(dir) {
+      selectedCalMonth.setMonth(selectedCalMonth.getMonth() + dir);
+      renderCalendar();
+    }
+
+    async function renderCalendar() {
+      const year = selectedCalMonth.getFullYear();
+      const month = selectedCalMonth.getMonth();
+      document.getElementById('calMonthLabel').innerText = selectedCalMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      const snap = await db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).once('value');
+      const logs = snap.val() || {};
+      const logMap = {};
+      Object.values(logs).forEach(l => { logMap[l.date] = l; });
+
+      // Padding
+      for (let i = 0; i < firstDay; i++) {
+        grid.innerHTML += `<div></div>`;
+      }
+
+      // Days
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const log = logMap[dateStr];
+
+        let badgeClass = 'bg-slate-800 border-slate-700 text-slate-400';
+        if (log) {
+          if (log.punctualityStatus === 'ON TIME') badgeClass = 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 font-bold';
+          else if (log.punctualityStatus === 'LATE') badgeClass = 'bg-amber-500/20 border-amber-500/40 text-amber-400 font-bold';
+          else if (log.punctualityStatus === 'ABSENT') badgeClass = 'bg-rose-500/20 border-rose-500/40 text-rose-400 font-bold';
+          else badgeClass = 'bg-blue-500/20 border-blue-500/40 text-blue-400 font-bold';
+        }
+
+        grid.innerHTML += `
+          <button onclick="showDayDetail('${dateStr}')" class="h-10 rounded-xl border flex flex-col items-center justify-center ${badgeClass} text-xs transition active:scale-95">
+            <span>${d}</span>
+          </button>
+        `;
+      }
+    }
+
+    async function showDayDetail(dateStr) {
+      const snap = await db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).once('value');
+      const logs = snap.val() || {};
+      const log = Object.values(logs).find(l => l.date === dateStr);
+
+      const card = document.getElementById('dayDetailCard');
+      card.classList.remove('hidden');
+      document.getElementById('dayDetailDate').innerText = dateStr;
+
+      if (log) {
+        document.getElementById('dayDetailStatus').innerText = log.punctualityStatus;
+        document.getElementById('dayDetailIn').innerText = log.clockIn || '--';
+        document.getElementById('dayDetailOut').innerText = log.clockOut || '--';
+        document.getElementById('dayDetailRemarks').innerText = log.remarks || 'None';
+      } else {
+        document.getElementById('dayDetailStatus').innerText = 'No Record';
+        document.getElementById('dayDetailIn').innerText = '--';
+        document.getElementById('dayDetailOut').innerText = '--';
+        document.getElementById('dayDetailRemarks').innerText = 'No log recorded.';
+      }
+    }
+
+    async function exportAttendanceCSV() {
+      const snap = await db.ref('attendance_logs').orderByChild('userEmail').equalTo(currentUser.email).once('value');
+      const logs = snap.val() || {};
+      let csv = 'Date,Clock In,Clock Out,Duration,Status,Remarks\n';
+
+      Object.values(logs).forEach(l => {
+        csv += `"${l.date}","${l.clockIn}","${l.clockOut || ''}","${l.durationText || ''}","${l.punctualityStatus}","${l.remarks || ''}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('href', url);
+      a.setAttribute('download', `Attendance_${currentUser.email}_${new Date().toISOString().split('T')[0]}.csv`);
+      a.click();
+    }
+
+    // -------------------------------------------------------------
+    // LEAVE MANAGEMENT
+    // -------------------------------------------------------------
+    function toggleAttachmentReq() {
+      const type = document.getElementById('leaveType').value;
+      const fileInput = document.getElementById('leaveFile');
+      fileInput.required = (type === 'Medical Leave');
+    }
+
+    async function handleLeaveSubmit(e) {
+      e.preventDefault();
+      const leaveType = document.getElementById('leaveType').value;
+      const startDate = document.getElementById('leaveStart').value;
+      const endDate = document.getElementById('leaveEnd').value;
+      const reason = document.getElementById('leaveReason').value;
+      const fileInput = document.getElementById('leaveFile');
+
+      let attachmentBase64 = '';
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        if (file.size > 3 * 1024 * 1024) {
+          alert('File size exceeds 3MB limit.');
+          return;
+        }
+        attachmentBase64 = await convertBase64(file);
+      }
+
+      const leaveData = {
+        empId: currentStaffData.employeeId,
+        empName: currentStaffData.name,
+        userEmail: currentUser.email,
+        leaveType, startDate, endDate, reason,
+        attachment: attachmentBase64,
+        status: 'PENDING',
+        createdAt: firebase.database.ServerValue.TIMESTAMP
+      };
+
+      await db.ref('leave_requests').push().set(leaveData);
+      alert('Leave request submitted!');
+      document.getElementById('leaveForm').reset();
+    }
+
+    function renderLeaveList(requests) {
+      const container = document.getElementById('leaveList');
+      container.innerHTML = '';
+      const list = Object.values(requests).reverse();
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic">No leave applications found.</p>`;
+        return;
+      }
+
+      list.forEach(r => {
+        let badgeColor = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+        if (r.status === 'APPROVED') badgeColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+        if (r.status === 'REJECTED') badgeColor = 'bg-rose-500/20 text-rose-400 border-rose-500/30';
+
+        container.innerHTML += `
+          <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold text-white">${r.leaveType}</p>
+              <p class="text-[10px] text-slate-400">${r.startDate} to ${r.endDate}</p>
+              <p class="text-[10px] text-slate-500 italic mt-1">"${r.reason}"</p>
+            </div>
+            <span class="px-2.5 py-1 text-[10px] font-bold rounded-full border ${badgeColor}">${r.status}</span>
+          </div>
+        `;
+      });
+    }
+
+    // -------------------------------------------------------------
+    // DAILY SALES & CALCULATIONS (SHARED ENGINE)
+    // -------------------------------------------------------------
+    function initSalesInventoryForm() {
+      const container = document.getElementById('inventoryContainer');
+      container.innerHTML = '';
+      document.getElementById('salesDate').value = new Date().toISOString().split('T')[0];
+
+      PRODUCTS.forEach(p => {
+        container.innerHTML += `
+          <div class="p-3 bg-slate-800/60 rounded-xl space-y-2 border border-slate-700/50">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-amber-400">${p.name}</span>
+              <span class="text-[10px] text-slate-400">Sold: <strong id="sold_${p.id}" class="text-white">0</strong></span>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5">
+              <input type="number" min="0" placeholder="Prev" id="prev_${p.id}" oninput="recalculateSales()" class="bg-slate-900 border border-slate-700 rounded p-1.5 text-[10px] text-white text-center">
+              <input type="number" min="0" placeholder="New" id="new_${p.id}" oninput="recalculateSales()" class="bg-slate-900 border border-slate-700 rounded p-1.5 text-[10px] text-white text-center">
+              <input type="number" min="0" placeholder="Promo" id="promo_${p.id}" oninput="recalculateSales()" class="bg-slate-900 border border-slate-700 rounded p-1.5 text-[10px] text-white text-center">
+              <input type="number" min="0" placeholder="Bal" id="bal_${p.id}" oninput="recalculateSales()" class="bg-slate-900 border border-slate-700 rounded p-1.5 text-[10px] text-white text-center">
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function recalculateSales() {
+      const bags = parseFloat(document.getElementById('salesBags').value) || 0;
+      const chickenPieces = bags * 20;
+      const chickenSales = chickenPieces * 4.50;
+
+      const platMisi = parseFloat(document.getElementById('platMisi').value) || 0;
+      const platLala = parseFloat(document.getElementById('platLala').value) || 0;
+      const platPanda = parseFloat(document.getElementById('platPanda').value) || 0;
+      const platGrab = parseFloat(document.getElementById('platGrab').value) || 0;
+      const platShopee = parseFloat(document.getElementById('platShopee').value) || 0;
+      const platformSales = platMisi + platLala + platPanda + platGrab + platShopee;
+
+      let productSales = 0;
+      PRODUCTS.forEach(p => {
+        const prev = parseFloat(document.getElementById(`prev_${p.id}`).value) || 0;
+        const newQty = parseFloat(document.getElementById(`new_${p.id}`).value) || 0;
+        const promo = parseFloat(document.getElementById(`promo_${p.id}`).value) || 0;
+        const bal = parseFloat(document.getElementById(`bal_${p.id}`).value) || 0;
+
+        let sold = (prev + newQty) - (promo + bal);
+        if (sold < 0) sold = 0;
+        document.getElementById(`sold_${p.id}`).innerText = sold;
+
+        productSales += (sold * p.price);
+      });
+
+      const promo10 = parseFloat(document.getElementById('promo10').value) || 0;
+      const promoSales = promo10 * 53.90;
+
+      const expGas = parseFloat(document.getElementById('expGas').value) || 0;
+      const expIce = parseFloat(document.getElementById('expIce').value) || 0;
+      const expGoods = parseFloat(document.getElementById('expGoods').value) || 0;
+      const expFuel = parseFloat(document.getElementById('expFuel').value) || 0;
+      const expLaundry = parseFloat(document.getElementById('expLaundry').value) || 0;
+      const expOil = parseFloat(document.getElementById('expOil').value) || 0;
+      const expMeal = parseFloat(document.getElementById('expMeal').value) || 0;
+      const totalExpenses = expGas + expIce + expGoods + expFuel + expLaundry + expOil + expMeal;
+
+      const grossSales = chickenSales + platformSales + productSales + promoSales;
+      const grandTotal = grossSales - totalExpenses;
+
+      document.getElementById('dispChicken').innerText = `RM ${chickenSales.toFixed(2)}`;
+      document.getElementById('dispPlatform').innerText = `RM ${platformSales.toFixed(2)}`;
+      document.getElementById('dispProduct').innerText = `RM ${(productSales + promoSales).toFixed(2)}`;
+      document.getElementById('dispGross').innerText = `RM ${grossSales.toFixed(2)}`;
+      document.getElementById('dispExpenses').innerText = `RM ${totalExpenses.toFixed(2)}`;
+      document.getElementById('dispGrand').innerText = `RM ${grandTotal.toFixed(2)}`;
+
+      return { chickenSales, platformSales, productSales: productSales + promoSales, grossSales, totalExpenses, grandTotal };
+    }
+
+    async function handleSalesSubmit(e) {
+      e.preventDefault();
+      const calc = recalculateSales();
+      const inventoryData = {};
+
+      PRODUCTS.forEach(p => {
+        const prev = parseFloat(document.getElementById(`prev_${p.id}`).value) || 0;
+        const newQty = parseFloat(document.getElementById(`new_${p.id}`).value) || 0;
+        const promo = parseFloat(document.getElementById(`promo_${p.id}`).value) || 0;
+        const bal = parseFloat(document.getElementById(`bal_${p.id}`).value) || 0;
+        let sold = (prev + newQty) - (promo + bal);
+        if (sold < 0) sold = 0;
+
+        inventoryData[p.id] = { prev, new: newQty, promo, balance: bal, sold };
+      });
+
+      const salesPayload = {
+        date: document.getElementById('salesDate').value,
+        branch: document.getElementById('salesBranch').value,
+        submittedBy: currentUser.email,
+        chicken: { bags: parseFloat(document.getElementById('salesBags').value) || 0, pieces: (parseFloat(document.getElementById('salesBags').value) || 0) * 20 },
+        platforms: {
+          misi: parseFloat(document.getElementById('platMisi').value) || 0,
+          lalamove: parseFloat(document.getElementById('platLala').value) || 0,
+          foodpanda: parseFloat(document.getElementById('platPanda').value) || 0,
+          grabfood: parseFloat(document.getElementById('platGrab').value) || 0,
+          shopeefood: parseFloat(document.getElementById('platShopee').value) || 0
+        },
+        inventory: inventoryData,
+        expenses: {
+          gas: parseFloat(document.getElementById('expGas').value) || 0,
+          ice: parseFloat(document.getElementById('expIce').value) || 0,
+          goods: parseFloat(document.getElementById('expGoods').value) || 0,
+          fuel: parseFloat(document.getElementById('expFuel').value) || 0,
+          laundry: parseFloat(document.getElementById('expLaundry').value) || 0,
+          oil: parseFloat(document.getElementById('expOil').value) || 0,
+          meal: parseFloat(document.getElementById('expMeal').value) || 0
+        },
+        qualityAndWastage: { wastage: document.getElementById('salesWastage').value },
+        calculations: calc,
+        createdAt: firebase.database.ServerValue.TIMESTAMP
+      };
+
+      await db.ref('sales_updates').push().set(salesPayload);
+      alert('Daily Sales report submitted successfully!');
+      document.getElementById('salesForm').reset();
+      recalculateSales();
+    }
+
+    // -------------------------------------------------------------
+    // PAYSLIPS
+    // -------------------------------------------------------------
+    function renderPayslips() {
+      const container = document.getElementById('payslipList');
+      container.innerHTML = '';
+      const yearFilter = document.getElementById('payslipYearFilter').value;
+
+      const payslips = Object.values(window.staffPayslips || {}).filter(p => {
+        if (yearFilter === 'ALL') return true;
+        return p.period.startsWith(yearFilter);
+      });
+
+      if (payslips.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic">No payslips found for this period.</p>`;
+        document.getElementById('dashPayslipStatus').innerText = 'Unavailable';
+        return;
+      }
+
+      document.getElementById('dashPayslipStatus').innerText = `${payslips[0].period} (RM ${payslips[0].amount.toFixed(2)})`;
+
+      payslips.forEach(p => {
+        container.innerHTML += `
+          <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <i class="fa-solid fa-file-invoice-dollar text-lg"></i>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-white">Pay Period: ${p.period}</p>
+                <p class="text-[10px] text-slate-400">Net: <strong class="text-emerald-400">RM ${p.amount.toFixed(2)}</strong></p>
+              </div>
+            </div>
+            <a href="${p.fileData}" download="${p.fileName}" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl transition">
+              Download
+            </a>
+          </div>
+        `;
+      });
+    }
+
+    // -------------------------------------------------------------
+    // UTILITIES
+    // -------------------------------------------------------------
+    function switchTab(tabId) {
+      ['dashboard', 'attendance', 'leave', 'sales', 'payslip', 'profile'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        document.getElementById(`nav-${t}`).className = 'flex flex-col items-center space-y-1 text-slate-400 hover:text-white';
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      document.getElementById(`nav-${tabId}`).className = 'flex flex-col items-center space-y-1 text-amber-500';
+    }
+
+    function convertBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
+  </script>
+</body>
+</html>
